@@ -1,0 +1,2446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suno Music Mixing Studio</title>
+  <meta name="description" content="Browser-based dark futuristic music mixing studio for Suno AI generated songs and stems.">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell" id="app">
+    
+    <!-- ======================================================================
+         1. Top Bar Component
+         ====================================================================== -->
+    <header class="top-bar" id="topBar" role="banner">
+      <div class="top-bar-left">
+        <a href="#studio" class="app-brand" title="Suno Music Mixing Studio">
+          <div class="brand-icon">
+            <img src="assets/logo.svg" alt="Suno Logo" width="28" height="28">
+          </div>
+          <div class="brand-title">
+            <span class="brand-gradient">SUNO</span> STUDIO
+            <span class="brand-badge">SOT v1.0</span>
+          </div>
+        </a>
+
+        <div class="divider-vertical" aria-hidden="true"></div>
+
+        <div class="project-info">
+          <div class="project-title-wrapper">
+            <span class="project-name" id="projectTitle" title="Current Project Name">Cyberpunk Odyssey (Suno v3.5)</span>
+            <span class="status-pill" id="autosaveIndicator" title="Project Autosave Status">
+              <span class="pulse-dot"></span>
+              <span>Autosaved</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-bar-center">
+        <div class="history-controls" role="group" aria-label="History Navigation">
+          <button class="icon-btn" id="btnUndo" title="Undo (Ctrl+Z)" disabled aria-label="Undo">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="btnRedo" title="Redo (Ctrl+Y)" disabled aria-label="Redo">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="project-metrics-quick" id="projectQuickMetrics" title="Project Summary">
+          <div class="metric-item">
+            <span class="metric-label">Len:</span>
+            <span class="metric-value tabular-nums" id="quickDuration">03:45</span>
+          </div>
+          <div class="divider-vertical" style="height: 12px;" aria-hidden="true"></div>
+          <div class="metric-item">
+            <span class="metric-label">BPM:</span>
+            <span class="metric-value tabular-nums" id="quickBpm">128</span>
+          </div>
+          <div class="divider-vertical" style="height: 12px;" aria-hidden="true"></div>
+          <div class="metric-item">
+            <span class="metric-label">Key:</span>
+            <span class="metric-value" id="quickKey">A min</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-bar-right">
+        <button class="btn btn-secondary btn-xs lang-toggle-btn" id="btnLangToggle" title="Ganti Bahasa / Switch Language" aria-label="Ganti Bahasa">
+          <span id="langFlag">🇮🇩</span>
+          <span id="langText">ID</span>
+        </button>
+        <button class="btn btn-secondary" id="btnMasterPreview" title="Preview Master Chain">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <span data-i18n="topbar.master_preview">Pratinjau Master</span>
+        </button>
+        <button class="btn btn-primary" id="btnExport" title="Export MP3/WAV">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span data-i18n="topbar.export">Ekspor Audio</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ======================================================================
+         2. Main Body (Sidebar + Timeline Workspace + Right Inspector)
+         ====================================================================== -->
+    <div class="studio-body">
+      
+      <!-- Left Navigation Sidebar -->
+      <aside class="sidebar" id="mainSidebar" role="navigation" aria-label="Main Navigation">
+        <div class="sidebar-nav">
+          <div class="nav-section-title" data-i18n="nav.navigation">Navigasi</div>
+          
+          <button class="nav-item" data-view="dashboard" id="navDashboard" title="Projects Dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span class="nav-text" data-i18n="nav.dashboard">Dashboard</span>
+          </button>
+
+          <button class="nav-item" data-view="library" id="navLibrary" title="Music Library">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+            <span class="nav-text" data-i18n="nav.library">Pustaka Musik</span>
+          </button>
+
+          <button class="nav-item active" data-view="studio" id="navStudio" title="Mixing Studio Workspace">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            <span class="nav-text" data-i18n="nav.studio">Studio Mixer</span>
+          </button>
+
+          <button class="nav-item" data-view="presets" id="navPresets" title="Mixing Presets">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span class="nav-text" data-i18n="nav.presets">Preset Studio</span>
+          </button>
+
+          <button class="nav-item" data-view="settings" id="navSettings" title="Studio Settings">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span class="nav-text" data-i18n="nav.settings">Pengaturan</span>
+          </button>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="storage-pill" title="Local browser project footprint">
+            <div class="storage-header">
+              <span data-i18n="nav.project_memory">Memori Proyek</span>
+              <span class="tabular-nums">3 Tracks • 14.8 MB</span>
+            </div>
+            <div class="storage-bar-bg">
+              <div class="storage-bar-fill"></div>
+            </div>
+          </div>
+          
+          <button class="sidebar-shortcuts-btn" id="btnOpenShortcuts" title="View Keyboard Shortcuts (?)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+              <line x1="6" y1="8" x2="6.01" y2="8"></line>
+              <line x1="10" y1="8" x2="10.01" y2="8"></line>
+              <line x1="14" y1="8" x2="14.01" y2="8"></line>
+              <line x1="18" y1="8" x2="18.01" y2="8"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            <span data-i18n="nav.shortcuts">Pintasan (?)</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Studio Workspace (Timeline & Waveforms) -->
+      <main class="main-workspace workspace-view" id="viewStudio" role="main">
+        
+        <!-- Timeline Sub-Header / Tool Bar -->
+        <div class="timeline-toolbar" role="toolbar" aria-label="Timeline Tools">
+          <div class="tool-group" role="radiogroup" aria-label="Editing Tools">
+            <button class="tool-btn active" id="toolSelect" title="Select Tool (V)" aria-label="Select Tool" role="radio" aria-checked="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 3 7 18 3-7 7-3L3 3z"></path>
+              </svg>
+            </button>
+            <button class="tool-btn" id="toolSplit" title="Razor / Split Tool (C)" aria-label="Razor Tool" role="radio" aria-checked="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="6" r="3"></circle>
+                <circle cx="6" cy="18" r="3"></circle>
+                <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+              </svg>
+            </button>
+            <button class="tool-btn" id="toolTrim" title="Slip / Trim Tool (S)" aria-label="Trim Tool" role="radio" aria-checked="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 14 10 14 10 20"></polyline>
+                <polyline points="20 10 14 10 14 4"></polyline>
+                <line x1="14" y1="10" x2="21" y2="3"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+            </button>
+            <button class="tool-btn" id="toolZoom" title="Zoom Tool (Z)" aria-label="Zoom Tool" role="radio" aria-checked="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="11" y1="8" x2="11" y2="14"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="timeline-settings-group">
+            <div class="snap-select-wrapper" title="Snap to Grid Setting">
+              <select class="snap-select-styled" id="snapSelect" aria-label="Snap to Grid">
+                <option value="quarter_beat" selected>Snap: 1/4 Beat</option>
+                <option value="eighth_beat">Snap: 1/8 Beat</option>
+                <option value="half_beat">Snap: 1/2 Beat</option>
+                <option value="1_bar">Snap: 1 Bar</option>
+                <option value="off">Snap: Off (Free)</option>
+              </select>
+            </div>
+
+            <div class="timeline-zoom-controls">
+              <button class="zoom-btn" id="btnZoomOut" title="Zoom Out (-)" aria-label="Zoom Out">−</button>
+              <span class="zoom-label tabular-nums" id="zoomLevelText">100%</span>
+              <button class="zoom-btn" id="btnZoomIn" title="Zoom In (+)" aria-label="Zoom In">+</button>
+              <button class="zoom-btn" id="btnZoomFit" title="Fit Timeline to Screen" aria-label="Fit Timeline to Screen">Fit</button>
+            </div>
+
+            <div class="divider-vertical" style="height: 16px; margin: 0 4px;" aria-hidden="true"></div>
+            <button class="btn btn-secondary btn-xs" id="btnToggleMixerDock" title="Toggle Multi-Track Mixer Console (M)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+                <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+              </svg>
+              <span data-i18n="toolbar.mixer">Konsol Mixer</span>
+            </button>
+            <button class="btn btn-secondary btn-xs" id="btnQuickAutoMix" title="Open One-Click Auto Mix Assistant">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+              <span data-i18n="toolbar.auto_mix">Campur Otomatis</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Multi-Track Timeline Viewport -->
+        <div class="timeline-viewport" id="timelineViewport">
+          
+          <!-- Master Preview Audition HUD (Phase 7) -->
+          <div class="master-preview-hud" id="masterPreviewHud" style="display: none;">
+            <div class="hud-left">
+              <div class="pulse-dot" style="background: #22C55E;"></div>
+              <span class="hud-title">MASTER PREVIEW AUDITION ACTIVE</span>
+              <span class="brand-badge" style="background: rgba(34, 197, 94, 0.15); color: #86EFAC;">44.1 kHz • 24-bit</span>
+            </div>
+            <div class="hud-metrics">
+              <div class="hud-stat-item">
+                <span class="hud-stat-label">INTEGRATED</span>
+                <span class="hud-stat-val tabular-nums" id="hudLufs">-14.0 LUFS</span>
+              </div>
+              <div class="hud-stat-item">
+                <span class="hud-stat-label">TRUE PEAK</span>
+                <span class="hud-stat-val tabular-nums" id="hudTruePeak">-0.1 dBTP</span>
+              </div>
+              <div class="hud-stat-item">
+                <span class="hud-stat-label">LIMITER GR</span>
+                <span class="hud-stat-val tabular-nums" id="hudLimiterGr">-0.8 dB</span>
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-xs" id="btnExitMasterPreview" title="Exit Master Preview">
+              <span>Exit Preview</span>
+            </button>
+          </div>
+
+          <!-- Ruler & Playhead Header -->
+          <div class="timeline-ruler-row" id="timelineRulerRow">
+            <div class="ruler-corner">
+              <span>TRACKS</span>
+              <span class="tabular-nums" style="font-size: 10px; color: var(--text-muted);">4 TOTAL</span>
+            </div>
+            
+            <div class="ruler-canvas-container" id="rulerContainer" title="Click or drag to scrub playhead">
+              <div class="ruler-ticks" id="rulerTicks">
+                <!-- Dynamically populated or rendered via JS for 00:00 - 03:45 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Playhead Global Indicator Line -->
+          <div class="playhead-line" id="globalPlayhead" style="left: 360px;">
+            <div class="playhead-head" id="playheadHead" title="Scrub Playhead"></div>
+          </div>
+
+          <!-- Multi-Track Lanes Container -->
+          <div class="tracks-container" id="tracksContainer">
+            
+            <!-- Track 1: Suno Lead Vocals -->
+            <div class="track-row selected" data-track-id="track-1" id="trackRow1">
+              <div class="track-header">
+                <div class="track-header-top">
+                  <div class="track-title-badge">
+                    <div class="track-color-indicator track-color-cyan"></div>
+                    <span class="track-name" title="Suno Lead Vocals">01 • Lead Vocals</span>
+                  </div>
+                  <div class="track-mute-solo">
+                    <button class="mini-toggle-btn mute" data-track="1" title="Mute Track">M</button>
+                    <button class="mini-toggle-btn solo" data-track="1" title="Solo Track">S</button>
+                  </div>
+                </div>
+
+                <div class="track-controls-bottom">
+                  <div class="track-fader-row">
+                    <div class="track-slider-wrap">
+                      <span class="track-slider-label">VOL</span>
+                      <input type="range" class="slider-input track-volume" min="-60" max="6" value="0" step="0.5" data-track="1" aria-label="Track 1 Volume">
+                    </div>
+                    <span class="track-db-readout tabular-nums" id="volReadout-1">0.0 dB</span>
+                  </div>
+                  <div class="track-fader-row">
+                    <div class="track-slider-wrap">
+                      <span class="track-slider-label">PAN</span>
+                      <input type="range" class="slider-input track-pan" min="-100" max="100" value="0" step="1" data-track="1" aria-label="Track 1 Pan">
+                    </div>
+                    <span class="track-db-readout tabular-nums" id="panReadout-1">C</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="track-lane" data-track="1">
+                <!-- Clips dynamically rendered via app.js -->
+              </div>
+            </div>
+
+            <!-- Track 2: Synth & Bass Arp -->
+            <div class="track-row" data-track-id="track-2" id="trackRow2">
+              <div class="track-header">
+                <div class="track-header-top">
+                  <div class="track-title-badge">
+                    <div class="track-color-indicator track-color-purple"></div>
+                    <span class="track-name" title="Synth & Bass Arp">02 • Synth & Bass</span>
+                  </div>
+                  <div class="track-mute-solo">
+                    <button class="mini-toggle-btn mute" data-track="2" title="Mute Track">M</button>
+                    <button class="mini-toggle-btn solo" data-track="2" title="Solo Track">S</button>
+                  </div>
+                </div>
+
+                <div class="track-controls-bottom">
+                  <div class="track-fader-row">
+                    <div class="track-slider-wrap">
+                      <span class="track-slider-label">VOL</span>
+                      <input type="range" class="slider-input track-volume" min="-60" max="6" value="-2" step="0.5" data-track="2" aria-label="Track 2 Volume">
+                    </div>
+                    <span class="track-db-readout tabular-nums" id="volReadout-2">-2.0 dB</span>
+                  </div>
+                  <div class="track-fader-row">
+                    <div class="track-slider-wrap">
+                      <span class="track-slider-label">PAN</span>
+                      <input type="range" class="slider-input track-pan" min="-100" max="100" value="-15" step="1" data-track="2" aria-label="Track 2 Pan">
+                    </div>
+                    <span class="track-db-readout tabular-nums" id="panReadout-2">L15</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="track-lane" data-track="2">
+                <!-- Clips dynamically rendered via app.js -->
+              </div>
+            </div>
+
+            <!-- Track 3: Cyber Drum Stems -->
+            <div class="track-row" data-track-id="track-3" id="trackRow3">
+              <div class="track-header">
+                <div class="track-header-top">
+                  <div class="track-title-badge">
+                    <div class="track-color-indicator track-color-emerald"></div>
+                    <span class="track-name" title="Drums & Percussion">03 • Cyber Drums</span>
+                  </div>
+                  <div class="track-mute-solo">
+                    <button class="mini-toggle-btn mute" data-track="3" title="Mute Track">M</button>
+                    <button class="mini-toggle-btn solo" data-track="3" title="Solo Track">S</button>
+                  </div>
+                </div>
+
+                <div class="track-controls-bottom">
+                  <div class="track-fader-row">
+                    <div class="track-slider-wrap">
+                      <span class="track-slider-label">VOL</span>
+                      <input type="range" class="slider-input track-volume" min="-60" max="6" value="-1" step="0.5" data-track="3" aria-label="Track 3 Volume">
+                    </div>
+                    <span class="track-db-readout tabular-nums" id="volReadout-3">-1.0 dB</span>
+                  </div>
+                  <div class="track-fader-row">
+                    <div class="track-slider-wrap">
+                      <span class="track-slider-label">PAN</span>
+                      <input type="range" class="slider-input track-pan" min="-100" max="100" value="10" step="1" data-track="3" aria-label="Track 3 Pan">
+                    </div>
+                    <span class="track-db-readout tabular-nums" id="panReadout-3">R10</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="track-lane" data-track="3">
+                <!-- Clips dynamically rendered via app.js -->
+              </div>
+            </div>
+
+            <!-- Track 4: Empty Dropzone Track (FX & Transitions) -->
+            <div class="track-row" data-track-id="track-4" id="trackRow4">
+              <div class="track-header">
+                <div class="track-header-top">
+                  <div class="track-title-badge">
+                    <div class="track-color-indicator track-color-amber"></div>
+                    <span class="track-name" title="FX & Transitions">04 • FX & Drops</span>
+                  </div>
+                  <div class="track-mute-solo">
+                    <button class="mini-toggle-btn mute" data-track="4" title="Mute Track">M</button>
+                    <button class="mini-toggle-btn solo" data-track="4" title="Solo Track">S</button>
+                  </div>
+                </div>
+
+                <div class="track-controls-bottom">
+                  <div class="track-fader-row">
+                    <div class="track-slider-wrap">
+                      <span class="track-slider-label">VOL</span>
+                      <input type="range" class="slider-input track-volume" min="-60" max="6" value="0" step="0.5" data-track="4" aria-label="Track 4 Volume">
+                    </div>
+                    <span class="track-db-readout tabular-nums" id="volReadout-4">0.0 dB</span>
+                  </div>
+                  <div class="track-fader-row">
+                    <div class="track-slider-wrap">
+                      <span class="track-slider-label">PAN</span>
+                      <input type="range" class="slider-input track-pan" min="-100" max="100" value="0" step="1" data-track="4" aria-label="Track 4 Pan">
+                    </div>
+                    <span class="track-db-readout tabular-nums" id="panReadout-4">C</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="track-lane" data-track="4">
+                <div class="empty-track-dropzone" id="emptyTrackDropzone">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Drop Suno stems or audio clip here</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Add Track Footer -->
+          <div class="add-track-footer">
+            <button class="add-track-btn" id="btnAddTrack" title="Add Audio Track">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+              <span>Add Audio Track</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Collapsible Multi-Track Mixer Console Drawer (Phase 5) -->
+        <div class="mixer-console-drawer" id="mixerConsoleDrawer" style="display: none;">
+          <div class="mixer-drawer-header">
+            <div class="mixer-drawer-title">
+              <div class="pulse-dot"></div>
+              <span class="mixer-title-text" data-i18n="mixer.console_title">KONSOL MIXER MULTI-SALURAN</span>
+              <span class="brand-badge">SOT Phase 5</span>
+            </div>
+            <div class="mixer-drawer-actions">
+              <div class="mixer-quick-preset-wrap" title="Quick Mix Preset Switcher">
+                <select class="form-select-styled" id="mixerQuickPresetSelect" aria-label="Quick Mix Preset" style="height: 24px; font-size: 11px; padding: 0 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
+                  <option value="" disabled selected>Preset: Select...</option>
+                </select>
+              </div>
+              <button class="btn btn-secondary btn-xs" id="btnMasterMonoToggle" title="Check Mono Compatibility">Stereo</button>
+              <button class="icon-btn" id="btnCloseMixerConsole" title="Close Mixer Console" aria-label="Close Mixer Console">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="mixer-strips-container" id="mixerStripsContainer">
+            <!-- Dynamically populated 4 Track Strips + Master Strip via app.js -->
+          </div>
+        </div>
+      </main>
+
+      <!-- ====================================================================
+           Phase 2 View: Projects Dashboard
+           ==================================================================== -->
+      <section class="workspace-view" id="viewDashboard" style="display: none;" role="region" aria-label="Projects Dashboard">
+        <div class="dashboard-container">
+          <!-- View Header -->
+          <div class="view-header">
+            <div class="view-title-group">
+              <h1>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                <span data-i18n="dashboard.title">Dashboard Proyek</span>
+              </h1>
+              <p class="view-subtitle" data-i18n="dashboard.subtitle">Buat, atur, dan buka sesi mixing musik Suno Anda</p>
+            </div>
+
+            <div class="view-actions-group">
+              <div class="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" class="search-input" id="projectSearchInput" placeholder="Cari proyek musik..." data-i18n-placeholder="dashboard.search_placeholder">
+              </div>
+              <button class="btn btn-primary" id="btnOpenNewProjectModal">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span data-i18n="dashboard.new_project">Proyek Baru</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Studio Stats Overview -->
+          <div class="dashboard-stats-grid">
+            <div class="dash-stat-card">
+              <div class="dash-stat-icon icon-purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <div class="dash-stat-content">
+                <span class="dash-stat-label">Active Projects</span>
+                <span class="dash-stat-val tabular-nums" id="statProjectCount">3</span>
+              </div>
+            </div>
+
+            <div class="dash-stat-card">
+              <div class="dash-stat-icon icon-cyan">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18V5l12-2v13"></path>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <circle cx="18" cy="16" r="3"></circle>
+                </svg>
+              </div>
+              <div class="dash-stat-content">
+                <span class="dash-stat-label">Library Stems</span>
+                <span class="dash-stat-val tabular-nums" id="statLibraryCount">6</span>
+              </div>
+            </div>
+
+            <div class="dash-stat-card">
+              <div class="dash-stat-icon icon-emerald">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </div>
+              <div class="dash-stat-content">
+                <span class="dash-stat-label">Audio Storage</span>
+                <span class="dash-stat-val tabular-nums">14.8 MB</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Projects Grid Container -->
+          <div>
+            <div class="projects-section-header">
+              <span class="section-heading">Recent Mixing Projects</span>
+            </div>
+            <div class="projects-grid" id="projectsGridContainer">
+              <!-- Dynamically populated via JavaScript -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           Phase 2 View: Music Library
+           ==================================================================== -->
+      <section class="workspace-view" id="viewLibrary" style="display: none;" role="region" aria-label="Music Library">
+        <div class="library-container">
+          <!-- View Header -->
+          <div class="view-header">
+            <div class="view-title-group">
+              <h1>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 18V5l12-2v13"></path>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <circle cx="18" cy="16" r="3"></circle>
+                </svg>
+                <span data-i18n="library.title">Pustaka Musik</span>
+              </h1>
+              <p class="view-subtitle" data-i18n="library.subtitle">Lagu hasil Suno AI, ekstraksi stem, dan aset audio</p>
+            </div>
+
+            <button class="btn btn-primary" id="btnOpenUploadModal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span data-i18n="library.upload_btn">Unggah Lagu Suno</span>
+            </button>
+          </div>
+
+          <!-- Controls Bar -->
+          <div class="library-controls-bar">
+            <div class="filter-pills-group" id="libraryFilterGroup" role="radiogroup" aria-label="Filter by Category">
+              <button class="filter-pill active" data-category="all" role="radio" aria-checked="true">All Stems (6)</button>
+              <button class="filter-pill" data-category="vocals" role="radio" aria-checked="false">Vocals</button>
+              <button class="filter-pill" data-category="beats" role="radio" aria-checked="false">Beats</button>
+              <button class="filter-pill" data-category="bass" role="radio" aria-checked="false">Bass</button>
+              <button class="filter-pill" data-category="synths" role="radio" aria-checked="false">Synths</button>
+              <button class="filter-pill" data-category="fx" role="radio" aria-checked="false">FX & Drops</button>
+            </div>
+
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" class="search-input" id="librarySearchInput" placeholder="Filter songs by name, key, or BPM...">
+            </div>
+          </div>
+
+          <!-- Song Table Card -->
+          <div class="library-table-card">
+            <table class="library-table" id="libraryTable">
+              <thead>
+                <tr>
+                  <th>Audio Track</th>
+                  <th>Category</th>
+                  <th>Duration</th>
+                  <th>BPM</th>
+                  <th>Key</th>
+                  <th>Energy</th>
+                  <th>Analysis Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="libraryTableBody">
+                <!-- Dynamically populated via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Context Inspector Panel -->
+      <aside class="inspector-panel" id="inspectorPanel" role="complementary" aria-label="Inspector Panel">
+        <div class="inspector-header">
+          <div class="inspector-tabs" role="tablist">
+            <button class="tab-btn active" data-tab="clip" id="tabClip" role="tab" aria-selected="true" data-i18n="inspector.tab_clip">Klip</button>
+            <button class="tab-btn" data-tab="mixer" id="tabMixer" role="tab" aria-selected="false" data-i18n="inspector.tab_mixer">Mixer</button>
+            <button class="tab-btn" data-tab="ai" id="tabAi" role="tab" aria-selected="false" data-i18n="inspector.tab_ai">Alat AI</button>
+          </div>
+          <button class="icon-btn" id="btnToggleInspector" title="Collapse Inspector Panel" aria-label="Collapse Inspector Panel" style="width: 26px; height: 26px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div class="inspector-content" id="inspectorContent">
+          
+          <!-- TAB PANE: Clip Inspector -->
+          <div class="tab-pane active" id="paneClip">
+            
+            <!-- ================================================================
+                 Phase 3: Audio Analysis & Buffer Status Card
+                 ================================================================ -->
+            <div class="inspector-card" id="cardAudioAnalysis">
+              <div class="card-title-row">
+                <span class="card-title">Audio Analysis & DSP</span>
+                <span class="status-analyzed-pill" id="analysisStatusPill">
+                  <span class="pulse-dot"></span>
+                  <span>Analyzed</span>
+                </span>
+              </div>
+
+              <!-- Re-Analyze Pipeline Progress (Hidden by default) -->
+              <div class="reanalyze-progress-box" id="reanalyzeProgressBox" style="display: none;">
+                <div style="display: flex; justify-content: space-between; font-size: 10px;">
+                  <span id="reanalyzeStepText" style="color: var(--accent);">FFT Processing...</span>
+                  <span class="tabular-nums" id="reanalyzePercent" style="color: var(--text-main); font-weight: 600;">0%</span>
+                </div>
+                <div class="progress-track" style="height: 4px;">
+                  <div class="progress-fill" id="reanalyzeProgressFill" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Action button to re-run analysis -->
+              <div style="display: flex; gap: 6px; margin-top: 2px;">
+                <button class="btn btn-secondary" id="btnReanalyzeTrack" style="flex: 1; height: 26px; font-size: 11px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                  <span>Re-Analyze</span>
+                </button>
+                <button class="btn btn-secondary" id="btnOpenAnalysisModal" style="flex: 1; height: 26px; font-size: 11px;" title="Deep Spectral & Harmonic Analysis">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  <span>Full Report</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ================================================================
+                 Phase 3: BPM Detection & Sync Readiness Card
+                 ================================================================ -->
+            <div class="inspector-card">
+              <div class="card-title-row">
+                <span class="card-title">BPM & Grid Sync</span>
+                <span class="sync-ready-pill" id="syncReadyBadge">
+                  <span class="pulse-dot" style="width: 5px; height: 5px; background: var(--accent); box-shadow: 0 0 6px var(--accent);"></span>
+                  <span>Grid Aligned</span>
+                </span>
+              </div>
+
+              <div class="analysis-subcard">
+                <div class="analysis-subcard-header">
+                  <span class="analysis-label">Detected Tempo</span>
+                  <span class="confidence-badge tabular-nums" id="bpmConfidenceText">98.5% Conf.</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 6px;">
+                  <span class="tabular-nums" id="analysisBpmReadout" style="font-size: 18px; font-weight: 700; color: var(--accent);">128.0</span>
+                  <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">BPM</span>
+                </div>
+                <div class="confidence-bar-track">
+                  <div class="confidence-bar-fill" id="bpmConfidenceFill" style="width: 98.5%;"></div>
+                </div>
+              </div>
+
+              <!-- Manual BPM Override & Multipliers -->
+              <div>
+                <span style="font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Manual Override / Halve / Double</span>
+                <div class="override-row">
+                  <input type="number" class="mini-input tabular-nums" id="inputBpmOverride" value="128" min="40" max="240" step="0.1" aria-label="Manual BPM Override">
+                  <button class="mini-btn" id="btnBpmHalf" title="Half-Time Tempo (/2)">/2</button>
+                  <button class="mini-btn" id="btnBpmDouble" title="Double-Time Tempo (x2)">x2</button>
+                  <button class="mini-btn" id="btnApplyBpmOverride" style="color: var(--accent);" title="Apply Tempo Override">Set</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================================================================
+                 Phase 3: Musical Key & Harmonic Compatibility Card
+                 ================================================================ -->
+            <div class="inspector-card">
+              <div class="card-title-row">
+                <span class="card-title">Musical Key & Harmony</span>
+                <span class="camelot-badge" id="analysisCamelotBadge">8A (Am)</span>
+              </div>
+
+              <div class="analysis-subcard">
+                <div class="analysis-subcard-header">
+                  <span class="analysis-label">Detected Key</span>
+                  <span class="confidence-badge tabular-nums" id="keyConfidenceText">94.0% Conf.</span>
+                </div>
+                <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                  <span id="analysisKeyReadout" style="font-size: 16px; font-weight: 700; color: var(--text-main);">A Minor</span>
+                  <select class="form-select" id="selectKeyOverride" style="padding: 2px 8px; font-size: 11px; height: 26px; width: 100px;">
+                    <option value="A min" selected>A min (8A)</option>
+                    <option value="C maj">C maj (8B)</option>
+                    <option value="E min">E min (9A)</option>
+                    <option value="D min">D min (7A)</option>
+                    <option value="G maj">G maj (9B)</option>
+                    <option value="F maj">F maj (7B)</option>
+                    <option value="F# min">F# min (11A)</option>
+                    <option value="B min">B min (10A)</option>
+                  </select>
+                </div>
+                <div class="confidence-bar-track">
+                  <div class="confidence-bar-fill" id="keyConfidenceFill" style="width: 94%;"></div>
+                </div>
+              </div>
+
+              <!-- Harmonic Compatibility List -->
+              <div>
+                <span style="font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Harmonic Matches (Mix Friendly)</span>
+                <div class="harmonic-chips-wrap" id="harmonicMatchesWrap">
+                  <span class="harmonic-chip perfect-match" title="Dominant fifth match">E min (9A)</span>
+                  <span class="harmonic-chip perfect-match" title="Subdominant fourth match">D min (7A)</span>
+                  <span class="harmonic-chip perfect-match" title="Relative major match">C maj (8B)</span>
+                  <span class="harmonic-chip" title="Same tonic scale">A maj (11B)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================================================================
+                 Phase 3: Energy Profile & Curve Representation
+                 ================================================================ -->
+            <div class="inspector-card">
+              <div class="card-title-row">
+                <span class="card-title">Energy Contour</span>
+                <span class="tabular-nums" id="energyScoreBadge" style="font-size: 11px; font-weight: 700; color: var(--accent);">84% Peak</span>
+              </div>
+
+              <div class="energy-curve-container" title="Energy timeline contour (Intro -> Build -> Drop -> Outro)">
+                <svg class="svg-energy-chart" id="analysisEnergySvg" viewBox="0 0 280 54" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="energyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.8"/>
+                      <stop offset="50%" stop-color="#22D3EE" stop-opacity="0.6"/>
+                      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.05"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- Smooth cubic bezier energy envelope -->
+                  <path id="energyPathArea" d="M0,45 Q35,38 70,30 T140,8 T210,18 T280,38 L280,54 L0,54 Z" fill="url(#energyGrad)"/>
+                  <path id="energyPathLine" d="M0,45 Q35,38 70,30 T140,8 T210,18 T280,38" fill="none" stroke="#22D3EE" stroke-width="2"/>
+                </svg>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); padding: 0 2px;">
+                <span>Intro (35%)</span>
+                <span>Build (65%)</span>
+                <span style="color: var(--accent); font-weight: 600;">Drop (95%)</span>
+                <span>Outro (30%)</span>
+              </div>
+            </div>
+
+            <!-- ================================================================
+                 Phase 3: Loudness & Dynamics Summary Card
+                 ================================================================ -->
+            <div class="inspector-card">
+              <div class="card-title-row">
+                <span class="card-title">Loudness & Dynamics</span>
+                <span class="status-analyzed-pill" style="font-size: 9px;">Spotify Match</span>
+              </div>
+
+              <div class="analysis-grid">
+                <div class="stat-box">
+                  <span class="stat-box-label">Integrated</span>
+                  <div class="stat-box-value tabular-nums">
+                    <span id="lufsIntegratedVal">-14.2</span>
+                    <span class="stat-unit">LUFS</span>
+                  </div>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-box-label">True Peak</span>
+                  <div class="stat-box-value tabular-nums">
+                    <span id="truePeakVal">-0.8</span>
+                    <span class="stat-unit">dBTP</span>
+                  </div>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-box-label">Range (LRA)</span>
+                  <div class="stat-box-value tabular-nums">
+                    <span id="lraVal">6.8</span>
+                    <span class="stat-unit">LU</span>
+                  </div>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-box-label">Short-Term Max</span>
+                  <div class="stat-box-value tabular-nums">
+                    <span id="lufsMaxVal">-11.5</span>
+                    <span class="stat-unit">LUFS</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Clip Properties Card -->
+            <div class="inspector-card" id="cardClipParams">
+              <div class="card-title-row">
+                <span class="card-title">Clip Parameters</span>
+                <span class="card-badge" id="inspectorClipTrackBadge">Track 1</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Clip Title</span>
+                <input type="text" class="prop-input-text" id="inspectorClipNameInput" value="Cyberpunk_Vocals_Stems.mp3" aria-label="Clip Title">
+                <span id="inspectorClipName" style="display: none;">Cyberpunk_Vocals_Stems.mp3</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Start Offset (s)</span>
+                <input type="number" class="prop-input" id="inspectorStartOffset" value="4.0" step="0.1" min="0" aria-label="Start Offset in seconds">
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Duration (s)</span>
+                <input type="number" class="prop-input" id="inspectorDuration" value="58.0" step="0.1" min="0.5" aria-label="Duration in seconds">
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Fade In (s)</span>
+                <input type="number" class="prop-input" id="inspectorFadeIn" value="0.5" step="0.1" min="0" aria-label="Fade In in seconds">
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Fade Out (s)</span>
+                <input type="number" class="prop-input" id="inspectorFadeOut" value="1.2" step="0.1" min="0" aria-label="Fade Out in seconds">
+              </div>
+              <!-- Clip Action Buttons -->
+              <div class="clip-actions-grid">
+                <button class="btn btn-secondary btn-xs" id="btnSplitAtPlayhead" title="Split clip at active playhead position">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="6" cy="6" r="3"></circle>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                    <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                  </svg>
+                  <span>Split Playhead</span>
+                </button>
+                <button class="btn btn-secondary btn-xs" id="btnDuplicateClip" title="Duplicate selected clip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>Duplicate</span>
+                </button>
+                <button class="btn btn-danger btn-xs" id="btnDeleteClip" title="Delete selected clip" style="grid-column: span 2;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Delete Clip</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Pitch & Tempo Card -->
+            <div class="inspector-card">
+              <div class="card-title-row">
+                <span class="card-title">Tempo & Pitch Match</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Tempo Stretch</span>
+                <span class="prop-val">100.0% (Native)</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Pitch Shift</span>
+                <span class="prop-val">0 Semitones</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Grid Snap Sync</span>
+                <span class="prop-val" style="color: var(--accent);">Aligned (1/4)</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- TAB PANE: Mixer & Channel Strip (Phase 5) -->
+          <div class="tab-pane" id="paneMixer" style="display: none;">
+            
+            <!-- Track Channel Header Card -->
+            <div class="inspector-card" id="cardMixerTrackHeader">
+              <div class="card-title-row">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div class="track-color-indicator track-color-cyan" id="mixerTrackColorDot"></div>
+                  <span class="card-title" id="mixerTrackNameHeading">01 • Lead Vocals</span>
+                </div>
+                <div class="track-select-wrap">
+                  <select class="snap-select-styled" id="mixerTrackSelector" aria-label="Select Track to Mix" style="height: 24px; font-size: 10px;">
+                    <option value="1" selected>Track 1: Lead Vocals</option>
+                    <option value="2">Track 2: Synth & Bass</option>
+                    <option value="3">Track 3: Cyber Drums</option>
+                    <option value="4">Track 4: FX & Drops</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Channel Quick Controls: Gain Trim, Pan, Mute, Solo -->
+              <div class="channel-quick-controls">
+                <div class="channel-prop-item">
+                  <span class="prop-label">Gain Trim</span>
+                  <div class="slider-input-wrap">
+                    <input type="range" class="slider-input" id="inputMixerGainTrim" min="-12" max="12" value="0" step="0.5" aria-label="Gain Trim">
+                    <span class="prop-readout tabular-nums" id="mixerGainTrimVal">0.0 dB</span>
+                  </div>
+                </div>
+                <div class="channel-prop-item">
+                  <span class="prop-label">Stereo Pan</span>
+                  <div class="slider-input-wrap">
+                    <input type="range" class="slider-input" id="inputMixerPan" min="-100" max="100" value="0" step="1" aria-label="Stereo Pan">
+                    <span class="prop-readout tabular-nums" id="mixerPanVal">C</span>
+                  </div>
+                </div>
+                <div class="channel-mute-solo-row">
+                  <button class="mini-toggle-btn mute" id="btnMixerMute" title="Mute Track">MUTE</button>
+                  <button class="mini-toggle-btn solo" id="btnMixerSolo" title="Solo Track">SOLO</button>
+                  <button class="btn btn-secondary btn-xs" id="btnToggleMixerConsole" title="Toggle Multi-Track Console View">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+                      <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+                      <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+                    </svg>
+                    <span>Console</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 1: 3-Band Parametric EQ with Visual Curve -->
+            <div class="inspector-card" id="cardMixerEq">
+              <div class="card-title-row">
+                <span class="card-title">3-Band Parametric EQ</span>
+                <button class="btn btn-secondary btn-xs" id="btnResetEq" title="Reset EQ to Flat">Flat</button>
+              </div>
+
+              <!-- Interactive Dynamic EQ Visual Curve Display -->
+              <div class="eq-curve-container" id="eqCurveContainer" title="Dynamic Frequency Response Curve">
+                <svg class="eq-curve-svg" id="eqCurveSvg" viewBox="0 0 280 90" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="eqCurveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.35"/>
+                      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.05"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- Reference Grid Lines: 100Hz, 1kHz, 10kHz & 0dB -->
+                  <line x1="50" y1="0" x2="50" y2="90" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2,2"/>
+                  <line x1="140" y1="0" x2="140" y2="90" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2,2"/>
+                  <line x1="230" y1="0" x2="230" y2="90" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2,2"/>
+                  <line x1="0" y1="45" x2="280" y2="45" stroke="rgba(255,255,255,0.15)"/>
+                  <path id="eqCurveArea" d="M0,45 Q70,45 140,45 T280,45 L280,90 L0,90 Z" fill="url(#eqCurveGrad)"/>
+                  <path id="eqCurveLine" d="M0,45 Q70,45 140,45 T280,45" fill="none" stroke="#22D3EE" stroke-width="2"/>
+                  <!-- Interactive Band Dots -->
+                  <circle id="eqLowDot" cx="50" cy="45" r="4" fill="#22D3EE" stroke="#FFFFFF" stroke-width="1.5"/>
+                  <circle id="eqMidDot" cx="140" cy="45" r="4" fill="#8B5CF6" stroke="#FFFFFF" stroke-width="1.5"/>
+                  <circle id="eqHighDot" cx="230" cy="45" r="4" fill="#22D3EE" stroke="#FFFFFF" stroke-width="1.5"/>
+                </svg>
+                <div class="eq-freq-labels">
+                  <span>80 Hz</span>
+                  <span>1.2 kHz</span>
+                  <span>10 kHz</span>
+                </div>
+              </div>
+
+              <!-- 3 EQ Band Sliders -->
+              <div class="eq-bands-grid">
+                <!-- Low Shelf Band -->
+                <div class="eq-band-control">
+                  <div class="eq-band-header">
+                    <span class="eq-band-tag" style="color: #22D3EE;">LOW (80Hz)</span>
+                    <span class="eq-gain-readout tabular-nums" id="eqLowGainVal">0.0 dB</span>
+                  </div>
+                  <input type="range" class="slider-input eq-slider" id="sliderEqLow" min="-12" max="12" value="0" step="0.5" aria-label="Low Shelf Gain">
+                </div>
+
+                <!-- Mid Peaking Band -->
+                <div class="eq-band-control">
+                  <div class="eq-band-header">
+                    <span class="eq-band-tag" style="color: #8B5CF6;">MID (1.2kHz)</span>
+                    <span class="eq-gain-readout tabular-nums" id="eqMidGainVal">0.0 dB</span>
+                  </div>
+                  <input type="range" class="slider-input eq-slider" id="sliderEqMid" min="-12" max="12" value="0" step="0.5" aria-label="Mid Peak Gain">
+                </div>
+
+                <!-- High Shelf Band -->
+                <div class="eq-band-control">
+                  <div class="eq-band-header">
+                    <span class="eq-band-tag" style="color: #22D3EE;">HIGH (10kHz)</span>
+                    <span class="eq-gain-readout tabular-nums" id="eqHighGainVal">0.0 dB</span>
+                  </div>
+                  <input type="range" class="slider-input eq-slider" id="sliderEqHigh" min="-12" max="12" value="0" step="0.5" aria-label="High Shelf Gain">
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Audio Effects Rack -->
+            <div class="inspector-card" id="cardMixerFxRack">
+              <div class="card-title-row">
+                <span class="card-title">Effects Rack</span>
+                <span class="card-badge" id="fxActiveCountBadge">2 Active</span>
+              </div>
+
+              <div class="fx-rack-slots">
+                <!-- Slot 1: Warm Studio Compressor -->
+                <div class="fx-slot-card active" id="fxSlotComp">
+                  <div class="fx-slot-header">
+                    <div class="fx-title-wrap">
+                      <span class="fx-slot-num">01</span>
+                      <span class="fx-slot-name">Warm Compressor</span>
+                    </div>
+                    <button class="mini-toggle-btn active" id="btnToggleComp" title="Enable / Bypass Compressor">ON</button>
+                  </div>
+                  <div class="fx-slot-body">
+                    <div class="fx-param-row">
+                      <span class="fx-param-label">Threshold</span>
+                      <input type="range" class="slider-input fx-slider" id="compThresh" min="-40" max="0" value="-18" step="1">
+                      <span class="fx-param-val tabular-nums" id="compThreshVal">-18 dB</span>
+                    </div>
+                    <div class="fx-param-row">
+                      <span class="fx-param-label">Ratio</span>
+                      <input type="range" class="slider-input fx-slider" id="compRatio" min="1" max="8" value="3.5" step="0.5">
+                      <span class="fx-param-val tabular-nums" id="compRatioVal">3.5:1</span>
+                    </div>
+                    <div class="fx-param-row">
+                      <span class="fx-param-label">Makeup</span>
+                      <input type="range" class="slider-input fx-slider" id="compGain" min="0" max="12" value="2.0" step="0.5">
+                      <span class="fx-param-val tabular-nums" id="compGainVal">+2.0 dB</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Slot 2: Cyber Space Reverb -->
+                <div class="fx-slot-card active" id="fxSlotReverb">
+                  <div class="fx-slot-header">
+                    <div class="fx-title-wrap">
+                      <span class="fx-slot-num">02</span>
+                      <span class="fx-slot-name">Cyber Reverb</span>
+                    </div>
+                    <button class="mini-toggle-btn active" id="btnToggleReverb" title="Enable / Bypass Reverb">ON</button>
+                  </div>
+                  <div class="fx-slot-body">
+                    <div class="fx-param-row">
+                      <span class="fx-param-label">Decay</span>
+                      <input type="range" class="slider-input fx-slider" id="revDecay" min="0.2" max="5.0" value="1.8" step="0.1">
+                      <span class="fx-param-val tabular-nums" id="revDecayVal">1.8s</span>
+                    </div>
+                    <div class="fx-param-row">
+                      <span class="fx-param-label">Wet Mix</span>
+                      <input type="range" class="slider-input fx-slider" id="revMix" min="0" max="100" value="25" step="1">
+                      <span class="fx-param-val tabular-nums" id="revMixVal">25%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Slot 3: Tempo Delay -->
+                <div class="fx-slot-card" id="fxSlotDelay">
+                  <div class="fx-slot-header">
+                    <div class="fx-title-wrap">
+                      <span class="fx-slot-num">03</span>
+                      <span class="fx-slot-name">Tempo Delay</span>
+                    </div>
+                    <button class="mini-toggle-btn" id="btnToggleDelay" title="Enable / Bypass Delay">OFF</button>
+                  </div>
+                  <div class="fx-slot-body">
+                    <div class="fx-param-row">
+                      <span class="fx-param-label">Time</span>
+                      <select class="snap-select-styled" id="delayTimeSelect" style="height: 22px; font-size: 10px; width: 68px;">
+                        <option value="1/4">1/4 Beat</option>
+                        <option value="1/8" selected>1/8 Beat</option>
+                        <option value="1/16">1/16 Beat</option>
+                      </select>
+                      <span class="fx-param-val tabular-nums" id="delayTimeVal">1/8</span>
+                    </div>
+                    <div class="fx-param-row">
+                      <span class="fx-param-label">Feedback</span>
+                      <input type="range" class="slider-input fx-slider" id="delayFeedback" min="0" max="80" value="30" step="1">
+                      <span class="fx-param-val tabular-nums" id="delayFeedbackVal">30%</span>
+                    </div>
+                    <div class="fx-param-row">
+                      <span class="fx-param-label">Wet Mix</span>
+                      <input type="range" class="slider-input fx-slider" id="delayMix" min="0" max="100" value="20" step="1">
+                      <span class="fx-param-val tabular-nums" id="delayMixVal">20%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Parameter Automation UI -->
+            <div class="inspector-card" id="cardMixerAutomation">
+              <div class="card-title-row">
+                <span class="card-title">Track Automation</span>
+                <div class="auto-mode-pills" id="autoModePills">
+                  <button class="auto-pill active" data-mode="read" title="Read Automation">Read</button>
+                  <button class="auto-pill" data-mode="write" title="Write Automation">Write</button>
+                  <button class="auto-pill" data-mode="touch" title="Touch Automation">Touch</button>
+                  <button class="auto-pill" data-mode="off" title="Automation Off">Off</button>
+                </div>
+              </div>
+
+              <div class="prop-row">
+                <span class="prop-label">Parameter</span>
+                <select class="snap-select-styled" id="autoParamSelect" style="height: 24px; font-size: 11px; flex: 1;">
+                  <option value="vol" selected>Track Volume (dB)</option>
+                  <option value="pan">Stereo Pan</option>
+                  <option value="eqMid">EQ Mid Gain (dB)</option>
+                  <option value="revMix">Reverb Send Mix (%)</option>
+                </select>
+              </div>
+
+              <!-- Visual Automation Curve Preview -->
+              <div class="auto-curve-wrap" id="autoCurveWrap" title="Click to add breakpoint node">
+                <svg class="auto-curve-svg" id="autoCurveSvg" viewBox="0 0 280 60" preserveAspectRatio="none">
+                  <line x1="0" y1="30" x2="280" y2="30" stroke="rgba(255,255,255,0.1)"/>
+                  <path id="autoCurvePath" d="M0,30 Q70,20 140,30 T280,35" fill="none" stroke="#22D3EE" stroke-width="2"/>
+                  <!-- Breakpoint Nodes -->
+                  <circle id="autoNode1" cx="40" cy="25" r="4" fill="#22D3EE" stroke="#FFFFFF" stroke-width="1.5"/>
+                  <circle id="autoNode2" cx="140" cy="30" r="4" fill="#22D3EE" stroke="#FFFFFF" stroke-width="1.5"/>
+                  <circle id="autoNode3" cx="220" cy="40" r="4" fill="#22D3EE" stroke="#FFFFFF" stroke-width="1.5"/>
+                </svg>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <span style="font-size: 10px; color: var(--text-muted);" id="autoPointCountLabel">3 Breakpoint Nodes</span>
+                <button class="btn btn-secondary btn-xs" id="btnClearAutomation">Clear Nodes</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- TAB PANE: AI Mixing Tools (Phase 6) -->
+          <div class="tab-pane" id="paneAi" style="display: none;">
+            
+            <!-- Card 1: Harmonic Match & Tempo Alignment -->
+            <div class="inspector-card" id="cardAiSync">
+              <div class="card-title-row">
+                <span class="card-title">Harmonic & Tempo Sync</span>
+                <span class="card-badge" style="background: rgba(139, 92, 246, 0.2); color: #C4B5FD;">Camelot AI</span>
+              </div>
+
+              <!-- BPM Matching Sub-Section -->
+              <div class="ai-sync-section">
+                <div class="prop-row">
+                  <span class="prop-label">Clip vs Project</span>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <span class="tabular-nums" style="font-size: 11px; font-weight: 700; color: var(--accent);" id="aiClipBpmVal">128.0 BPM</span>
+                    <span style="font-size: 10px; color: var(--text-muted);">/</span>
+                    <span class="tabular-nums" style="font-size: 11px; color: var(--text-secondary);" id="aiProjectBpmVal">128.0 BPM</span>
+                  </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                  <span style="font-size: 10px; color: var(--text-muted);" id="aiStretchFactor">Tempo Shift: 0.0% (In Sync)</span>
+                  <button class="btn btn-secondary btn-xs" id="btnMatchBpm" title="Match Clip Tempo to Project BPM">Match BPM</button>
+                </div>
+              </div>
+
+              <div class="divider-horizontal" style="margin: 8px 0;"></div>
+
+              <!-- Harmonic Key Matching Sub-Section -->
+              <div class="ai-sync-section">
+                <div class="prop-row">
+                  <span class="prop-label">Camelot Wheel</span>
+                  <span class="status-analyzed-pill" id="aiCamelotBadge" style="font-size: 9px;">
+                    <span class="pulse-dot"></span>
+                    <span id="aiCamelotText">8A ⇄ 8A Perfect Match</span>
+                  </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                  <span style="font-size: 10px; color: var(--text-muted);" id="aiTransposeSuggestion">Shift: None required</span>
+                  <button class="btn btn-secondary btn-xs" id="btnHarmonizeKey" title="Transpose Stem to Match Project Key">Harmonize</button>
+                </div>
+              </div>
+
+              <div class="divider-horizontal" style="margin: 8px 0;"></div>
+
+              <!-- Beat Synchronization Sub-Section -->
+              <div class="ai-sync-section">
+                <div class="prop-row">
+                  <span class="prop-label">Beat Alignment</span>
+                  <span style="font-size: 10px; font-family: var(--font-mono); color: var(--text-secondary);" id="aiDownbeatOffset">Aligned to Bar 2.1</span>
+                </div>
+                <button class="btn btn-secondary btn-xs" id="btnSnapBeatGrid" style="width: 100%; margin-top: 6px;" title="Align Clip Downbeat to Nearest Project Bar">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <polyline points="12 3 21 12 12 21"></polyline>
+                  </svg>
+                  <span>Align Downbeat to Nearest Bar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 2: Smart Transition Assistant -->
+            <div class="inspector-card" id="cardAiTransitions">
+              <div class="card-title-row">
+                <span class="card-title">Smart Transition</span>
+                <span class="card-badge" style="background: rgba(34, 211, 238, 0.15); color: #22D3EE;">Contextual</span>
+              </div>
+              <p style="font-size: 10px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;" id="aiTransitionContext">
+                Suggested transitions based on BPM, Camelot key, and audio energy between adjacent clips.
+              </p>
+
+              <div class="ai-transition-styles-grid" id="aiTransitionStyles">
+                <button class="transition-style-btn active" data-style="energy" title="Smooth Energy Crossfade">
+                  <span class="style-title">Energy Drop</span>
+                  <span class="style-desc">Linear Crossfade</span>
+                </button>
+                <button class="transition-style-btn" data-style="filter" title="High-Pass Frequency Transition">
+                  <span class="style-title">Filter Sweep</span>
+                  <span class="style-desc">HPF Cutoff Sweep</span>
+                </button>
+                <button class="transition-style-btn" data-style="echo" title="Reverb & Delay Tail Washout">
+                  <span class="style-title">Echo Wash</span>
+                  <span class="style-desc">Reverb Tail Drop</span>
+                </button>
+                <button class="transition-style-btn" data-style="cut" title="Instant Transient Beat Cut">
+                  <span class="style-title">Hard Cut</span>
+                  <span class="style-desc">Downbeat Slice</span>
+                </button>
+              </div>
+
+              <div class="prop-row" style="margin-top: 10px;">
+                <span class="prop-label">Transition Length</span>
+                <select class="snap-select-styled" id="aiTransitionDurationSelect" style="height: 24px; font-size: 11px; width: 130px;">
+                  <option value="0.94">1/2 Bar (0.94s)</option>
+                  <option value="1.88" selected>1 Bar (1.88s)</option>
+                  <option value="3.75">2 Bars (3.75s)</option>
+                  <option value="7.50">4 Bars (7.50s)</option>
+                </select>
+              </div>
+
+              <button class="btn btn-primary btn-xs" id="btnApplySmartTransition" style="width: 100%; margin-top: 10px;">
+                <span>Apply Smart Transition</span>
+              </button>
+            </div>
+
+            <!-- Card 3: Intelligent Silence Trimming & Loudness Normalization -->
+            <div class="inspector-card" id="cardAiCleanNormalize">
+              <div class="card-title-row">
+                <span class="card-title">Trimming & Loudness</span>
+                <span class="card-badge">DSP Signal</span>
+              </div>
+
+              <!-- Intelligent Silence Trimming -->
+              <div>
+                <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Silence Detection</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--active-panel-bg); padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border-color);">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <div class="pulse-dot" style="background: var(--accent);"></div>
+                    <span style="font-size: 10px; color: var(--text-main);" id="aiSilenceDetectedText">0.35s leading silence detected</span>
+                  </div>
+                  <button class="btn btn-secondary btn-xs" id="btnAutoTrimSilence" title="Trim Lead Silence and Apply Micro-Fade">Auto-Trim</button>
+                </div>
+              </div>
+
+              <div class="divider-horizontal" style="margin: 10px 0;"></div>
+
+              <!-- Loudness Normalization -->
+              <div>
+                <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Loudness Normalization</div>
+                <div class="prop-row">
+                  <span class="prop-label">Integrated LUFS</span>
+                  <span class="tabular-nums" style="font-size: 11px; font-weight: 700; color: var(--accent);" id="aiCurrentLufsVal">-14.2 LUFS</span>
+                </div>
+                <div class="prop-row" style="margin-top: 4px;">
+                  <span class="prop-label">Target Standard</span>
+                  <select class="snap-select-styled" id="aiTargetLufsSelect" style="height: 24px; font-size: 10px; width: 140px;">
+                    <option value="-14.0" selected>-14 LUFS (Streaming)</option>
+                    <option value="-12.0">-12 LUFS (Club / Dance)</option>
+                    <option value="-16.0">-16 LUFS (Acoustic)</option>
+                  </select>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                  <span style="font-size: 10px; color: var(--text-muted);" id="aiLoudnessDeltaVal">Required Offset: +0.2 dB</span>
+                  <button class="btn btn-secondary btn-xs" id="btnNormalizeLoudness">Normalize</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 4: Auto Mix Engine Launcher -->
+            <div class="inspector-card" id="cardAiAutoMixLauncher" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(34, 211, 238, 0.04)); border-color: rgba(139, 92, 246, 0.3);">
+              <div class="card-title-row">
+                <span class="card-title" style="color: #C4B5FD;">Auto Mix Engine</span>
+                <span class="status-analyzed-pill" id="aiAutoMixStatusBadge">
+                  <span class="pulse-dot"></span>
+                  <span id="aiAutoMixStatusText">Ready</span>
+                </span>
+              </div>
+              <p style="font-size: 10px; color: var(--text-secondary); line-height: 1.4; margin-top: 4px;">
+                One-click intelligent multi-stem balance: balances faders, stereo field, dynamic range, and vocal presence automatically.
+              </p>
+              <div style="display: flex; gap: 6px; margin-top: 10px;">
+                <button class="btn btn-primary btn-xs" id="btnOpenAutoMixModal" style="flex: 1;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                  </svg>
+                  <span>Auto Mix Assistant</span>
+                </button>
+                <button class="btn btn-secondary btn-xs" id="btnRevertAutoMix" style="display: none;" title="Revert to Previous Manual Mix">
+                  <span>Revert</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- ======================================================================
+         3. Bottom Transport & Master Meter Bar
+         ====================================================================== -->
+    <footer class="transport-bar" id="transportBar" role="contentinfo" aria-label="Audio Transport Controls">
+      
+      <!-- Left: Transport Controls & Timecode -->
+      <div class="transport-left">
+        <div class="transport-buttons" role="group" aria-label="Transport Control Group">
+          <button class="transport-btn" id="btnReturnZero" title="Return to Beginning (Home / Enter)" aria-label="Return to Start">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/>
+            </svg>
+          </button>
+          
+          <button class="transport-btn" id="btnRewind" title="Rewind 5s (J)" aria-label="Rewind">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="m11 18-9-6 9-6zm11 0-9-6 9-6z"/>
+            </svg>
+          </button>
+
+          <button class="transport-btn btn-play-pause" id="btnPlayPause" title="Play / Pause (Space)" aria-label="Play or Pause">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" id="playIcon">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </button>
+
+          <button class="transport-btn" id="btnStop" title="Stop (Escape)" aria-label="Stop">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="1"></rect>
+            </svg>
+          </button>
+
+          <button class="transport-btn" id="btnFastForward" title="Fast Forward 5s (L)" aria-label="Fast Forward">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="m13 6 9 6-9 6zm-11 0 9 6-9 6z"/>
+            </svg>
+          </button>
+
+          <button class="transport-btn" id="btnLoop" title="Toggle Loop Region (R)" aria-label="Toggle Loop">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"></polyline>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+              <polyline points="7 23 3 19 7 15"></polyline>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="timecode-display" title="Current Playhead Position / Total Length">
+          <span class="timecode-current tabular-nums" id="timecodeCurrent">00:24.80</span>
+          <span class="timecode-total tabular-nums" id="timecodeTotal">/ 03:45.00</span>
+        </div>
+      </div>
+
+      <!-- Center: Tempo, Time Sig & Pitch Readout -->
+      <div class="transport-center">
+        <div class="tempo-card" title="Master Project Tempo">
+          <span class="tempo-label">BPM</span>
+          <span class="tempo-value tabular-nums" id="tempoBpmValue">128.0</span>
+        </div>
+        <div class="tempo-card" title="Project Time Signature">
+          <span class="tempo-label">SIG</span>
+          <span class="tempo-value" id="tempoSigValue">4 / 4</span>
+        </div>
+        <div class="tempo-card" title="Project Root Key">
+          <span class="tempo-label">KEY</span>
+          <span class="tempo-key" id="tempoKeyValue">A min</span>
+        </div>
+      </div>
+
+      <!-- Right: Master Stereo VU Meters & Fader -->
+      <div class="transport-right">
+        <div class="master-meter-section" title="Stereo Master Peak Meters">
+          <div class="vu-meters-wrap">
+            <div class="meter-channel">
+              <span class="meter-channel-label">L</span>
+              <div class="meter-track">
+                <div class="meter-fill" id="meterL" style="width: 62%;"></div>
+              </div>
+            </div>
+            <div class="meter-channel">
+              <span class="meter-channel-label">R</span>
+              <div class="meter-track">
+                <div class="meter-fill" id="meterR" style="width: 58%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="master-fader-wrap">
+            <span class="master-vol-label">MST</span>
+            <input type="range" class="slider-input" id="masterVolumeSlider" min="-60" max="6" value="0" step="0.5" style="width: 68px;" aria-label="Master Output Volume">
+            <span class="master-db-readout tabular-nums" id="masterDbReadout">0.0 dB</span>
+          </div>
+        </div>
+
+        <div class="engine-status-tag" title="Audio Engine Architecture State">
+          <span class="pulse-dot"></span>
+          <span>44.1 kHz • Stereo</span>
+        </div>
+      </div>
+
+    </footer>
+
+  </div>
+
+  <!-- ======================================================================
+       4. Modal: Keyboard Shortcuts Reference
+       ====================================================================== -->
+  <div class="modal-backdrop" id="shortcutsModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-container" style="width: 620px; max-width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <line x1="6" y1="8" x2="6.01" y2="8"></line>
+            <line x1="10" y1="8" x2="10.01" y2="8"></line>
+            <line x1="14" y1="8" x2="14.01" y2="8"></line>
+            <line x1="18" y1="8" x2="18.01" y2="8"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <span>Studio Keyboard Shortcuts</span>
+          <span class="brand-badge" style="background: rgba(139, 92, 246, 0.15); color: #C4B5FD;">Quick Reference</span>
+        </div>
+        <button class="icon-btn" id="btnCloseShortcuts" title="Close (Esc)" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Shortcuts Search Filter Bar -->
+      <div class="shortcuts-search-wrap" style="padding: 10px 20px 0 20px;">
+        <div class="search-box" style="width: 100%;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="shortcutSearchInput" placeholder="Filter shortcuts by action or key (e.g. export, split, zoom)..." style="width: 100%;">
+        </div>
+      </div>
+
+      <div class="modal-body" id="shortcutsListWrap" style="max-height: 440px; overflow-y: auto;">
+        
+        <!-- Category 1: Transport & Playback -->
+        <div class="shortcut-category-group">
+          <div class="shortcut-group-title">Transport & Playback</div>
+          <div class="shortcut-row" data-search="play pause spacebar transport">
+            <span class="shortcut-desc">Play / Pause</span>
+            <span class="shortcut-keys"><kbd class="kbd">Space</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="return zero start beginning home enter">
+            <span class="shortcut-desc">Return to Zero / Start</span>
+            <span class="shortcut-keys"><kbd class="kbd">Home</kbd> / <kbd class="kbd">Enter</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="stop playback escape dismiss">
+            <span class="shortcut-desc">Stop Playback / Dismiss Modals</span>
+            <span class="shortcut-keys"><kbd class="kbd">Esc</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="loop toggle repeat cycle r">
+            <span class="shortcut-desc">Toggle Loop Mode</span>
+            <span class="shortcut-keys"><kbd class="kbd">R</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="rewind backward 5s left arrow j">
+            <span class="shortcut-desc">Rewind 5s</span>
+            <span class="shortcut-keys"><kbd class="kbd">J</kbd> / <kbd class="kbd">←</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="fast forward 5s right arrow l">
+            <span class="shortcut-desc">Fast Forward 5s</span>
+            <span class="shortcut-keys"><kbd class="kbd">L</kbd> / <kbd class="kbd">→</kbd></span>
+          </div>
+        </div>
+
+        <!-- Category 2: Timeline & Editing Tools -->
+        <div class="shortcut-category-group">
+          <div class="shortcut-group-title">Timeline & Editing Tools</div>
+          <div class="shortcut-row" data-search="pointer select selection tool v">
+            <span class="shortcut-desc">Pointer / Select Tool</span>
+            <span class="shortcut-keys"><kbd class="kbd">V</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="razor split cut blade slice c">
+            <span class="shortcut-desc">Razor / Split Tool</span>
+            <span class="shortcut-keys"><kbd class="kbd">C</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="slip trim edge boundary s">
+            <span class="shortcut-desc">Slip / Trim Tool</span>
+            <span class="shortcut-keys"><kbd class="kbd">S</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="zoom tool z">
+            <span class="shortcut-desc">Zoom Tool</span>
+            <span class="shortcut-keys"><kbd class="kbd">Z</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="zoom in enlarge magnify plus equal">
+            <span class="shortcut-desc">Zoom In</span>
+            <span class="shortcut-keys"><kbd class="kbd">+</kbd> / <kbd class="kbd">=</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="zoom out reduce minus">
+            <span class="shortcut-desc">Zoom Out</span>
+            <span class="shortcut-keys"><kbd class="kbd">−</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="zoom fit reset 100 screen f 0">
+            <span class="shortcut-desc">Fit Timeline to View</span>
+            <span class="shortcut-keys"><kbd class="kbd">F</kbd> / <kbd class="kbd">0</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="delete clip remove trash backspace">
+            <span class="shortcut-desc">Delete Selected Clip</span>
+            <span class="shortcut-keys"><kbd class="kbd">Del</kbd> / <kbd class="kbd">⌫</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="duplicate copy clone clip ctrl d cmd">
+            <span class="shortcut-desc">Duplicate Selected Clip</span>
+            <span class="shortcut-keys"><kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">D</kbd></span>
+          </div>
+        </div>
+
+        <!-- Category 3: Mixer, Master & AI Tools -->
+        <div class="shortcut-category-group">
+          <div class="shortcut-group-title">Mixer, Master & AI</div>
+          <div class="shortcut-row" data-search="mixer console drawer faders channel m">
+            <span class="shortcut-desc">Toggle Mixer Console</span>
+            <span class="shortcut-keys"><kbd class="kbd">M</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="inspector properties panel clip eq fx i">
+            <span class="shortcut-desc">Toggle Inspector Panel</span>
+            <span class="shortcut-keys"><kbd class="kbd">I</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="master preview audition lufs peak p">
+            <span class="shortcut-desc">Toggle Master Preview</span>
+            <span class="shortcut-keys"><kbd class="kbd">P</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="auto mix assistant intelligent auto-balance a">
+            <span class="shortcut-desc">Open Auto Mix Assistant</span>
+            <span class="shortcut-keys"><kbd class="kbd">A</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="presets studio mixing presets shift p alt">
+            <span class="shortcut-desc">Open Studio Presets</span>
+            <span class="shortcut-keys"><kbd class="kbd">Shift</kbd>+<kbd class="kbd">P</kbd></span>
+          </div>
+        </div>
+
+        <!-- Category 4: Session & File Management -->
+        <div class="shortcut-category-group">
+          <div class="shortcut-group-title">Session & File Actions</div>
+          <div class="shortcut-row" data-search="export mix master audio wav mp3 ctrl e cmd">
+            <span class="shortcut-desc">Export Master Mix</span>
+            <span class="shortcut-keys"><kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">E</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="save project snapshot autosave ctrl s cmd">
+            <span class="shortcut-desc">Save Session Snapshot</span>
+            <span class="shortcut-keys"><kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">S</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="undo action ctrl z cmd">
+            <span class="shortcut-desc">Undo Action</span>
+            <span class="shortcut-keys"><kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">Z</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="redo action ctrl y shift z cmd">
+            <span class="shortcut-desc">Redo Action</span>
+            <span class="shortcut-keys"><kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">Y</kbd></span>
+          </div>
+          <div class="shortcut-row" data-search="help shortcuts overlay question mark slash">
+            <span class="shortcut-desc">Toggle Keyboard Shortcuts</span>
+            <span class="shortcut-keys"><kbd class="kbd">?</kbd></span>
+          </div>
+        </div>
+
+        <!-- Empty Search State -->
+        <div class="no-shortcuts-found" id="noShortcutsFound" style="display: none; padding: 24px; text-align: center; color: var(--text-muted);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 8px; opacity: 0.5;">
+            <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <div style="font-size: 13px; font-weight: 600;">No matching shortcuts found</div>
+          <div style="font-size: 11px; margin-top: 4px;">Try searching for "play", "tool", "export", or "zoom"</div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <span style="font-size: 11px; color: var(--text-muted);">Pro tip: Press <kbd class="kbd" style="font-size: 9px; padding: 1px 4px;">?</kbd> anywhere to open this reference</span>
+        <button type="button" class="btn btn-secondary" id="btnDismissShortcuts">Close</button>
+      </div>
+    </div>
+  </div>
+  <!-- ======================================================================
+       5. Modal: Create New Project
+       ====================================================================== -->
+  <div class="modal-backdrop" id="newProjectModal" role="dialog" aria-modal="true" aria-labelledby="newProjectModalTitle">
+    <div class="modal-container" style="width: 460px;">
+      <div class="modal-header">
+        <div class="modal-title" id="newProjectModalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Create New Mixing Project</span>
+        </div>
+        <button class="icon-btn" id="btnCloseNewProjectModal" title="Close" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <form id="newProjectForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="inputProjectName">Project Name</label>
+            <input type="text" class="form-input" id="inputProjectName" placeholder="e.g. Cyberpunk Drift (Suno v3.5)" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+            <div class="form-group">
+              <label class="form-label" for="inputProjectBpm">Master Tempo (BPM)</label>
+              <input type="number" class="form-input tabular-nums" id="inputProjectBpm" min="40" max="240" value="128" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="selectProjectKey">Musical Key</label>
+              <select class="form-select" id="selectProjectKey">
+                <option value="A min" selected>A Minor (Am)</option>
+                <option value="C maj">C Major (C)</option>
+                <option value="D min">D Minor (Dm)</option>
+                <option value="E min">E Minor (Em)</option>
+                <option value="F min">F Minor (Fm)</option>
+                <option value="G maj">G Major (G)</option>
+                <option value="F# min">F# Minor (F#m)</option>
+                <option value="Bb maj">Bb Major (Bb)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="selectProjectSig">Time Signature</label>
+            <select class="form-select" id="selectProjectSig">
+              <option value="4 / 4" selected>4 / 4 (Standard)</option>
+              <option value="3 / 4">3 / 4 (Waltz)</option>
+              <option value="6 / 8">6 / 8 (Triplet)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnCancelNewProject">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitNewProject">
+            <span>Create & Open</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       6. Modal: Upload Suno Audio Stems
+       ====================================================================== -->
+  <div class="modal-backdrop" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+    <div class="modal-container" style="width: 500px;">
+      <div class="modal-header">
+        <div class="modal-title" id="uploadModalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>Upload Suno Track / Stems</span>
+        </div>
+        <button class="icon-btn" id="btnCloseUploadModal" title="Close" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Hidden file input -->
+        <input type="file" id="audioFileInput" accept=".mp3,.wav,.ogg,.flac,.m4a,audio/*" style="display: none;">
+
+        <!-- Dropzone Box -->
+        <div class="upload-dropzone" id="uploadDropzone" tabindex="0" role="button" aria-label="Upload Audio File Dropzone">
+          <div class="upload-dropzone-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+          </div>
+          <div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">
+              Drag & Drop your Suno audio file here
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+              Supports MP3, WAV, FLAC, AAC (Up to 50MB)
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary" id="btnBrowseFile" style="margin-top: 4px;">
+            <span>Browse Files</span>
+          </button>
+        </div>
+
+        <!-- Upload Progress State -->
+        <div class="upload-progress-box" id="uploadProgressBox" style="display: none;">
+          <div class="upload-progress-header">
+            <span id="uploadStatusText" style="color: var(--accent); font-weight: 500;">Reading audio stream...</span>
+            <span class="tabular-nums" id="uploadPercentText" style="color: var(--text-main); font-weight: 600;">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="uploadProgressFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Metadata Preview Extraction -->
+        <div class="upload-meta-preview" id="uploadMetaPreview" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase;">Analyzed Track Preview</span>
+            <span class="status-analyzed-pill">
+              <span class="pulse-dot"></span>
+              <span>Ready for Library</span>
+            </span>
+          </div>
+          <div style="font-size: 13px; font-weight: 700; color: var(--text-main);" id="previewSongTitle">Cyberpunk_Track.mp3</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px;">
+            <div class="stat-box" style="padding: 6px 8px;">
+              <span class="stat-box-label">BPM</span>
+              <span class="stat-box-value tabular-nums" id="previewBpm" style="font-size: 12px;">128</span>
+            </div>
+            <div class="stat-box" style="padding: 6px 8px;">
+              <span class="stat-box-label">Key</span>
+              <span class="stat-box-value" id="previewKey" style="font-size: 12px;">A min</span>
+            </div>
+            <div class="stat-box" style="padding: 6px 8px;">
+              <span class="stat-box-label">Length</span>
+              <span class="stat-box-value tabular-nums" id="previewDuration" style="font-size: 12px;">02:35</span>
+            </div>
+            <div class="stat-box" style="padding: 6px 8px;">
+              <span class="stat-box-label">Energy</span>
+              <span class="stat-box-value" id="previewEnergy" style="font-size: 12px; color: var(--accent);">High</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelUpload">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmAddToLibrary" disabled>
+          <span>Save to Library</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       7. Modal: Rename Project
+       ====================================================================== -->
+  <div class="modal-backdrop" id="renameModal" role="dialog" aria-modal="true" aria-labelledby="renameModalTitle">
+    <div class="modal-container" style="width: 420px;">
+      <div class="modal-header">
+        <div class="modal-title" id="renameModalTitle">Rename Project</div>
+        <button class="icon-btn" id="btnCloseRenameModal" title="Close" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <form id="renameProjectForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="inputRenameProject">New Project Title</label>
+            <input type="text" class="form-input" id="inputRenameProject" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnCancelRename">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       8. Modal: Delete Project Confirmation
+       ====================================================================== -->
+  <div class="modal-backdrop" id="deleteProjectModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-container" style="width: 420px;">
+      <div class="modal-header">
+        <div class="modal-title" id="deleteModalTitle" style="color: var(--danger);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Delete Project?</span>
+        </div>
+        <button class="icon-btn" id="btnCloseDeleteModal" title="Close" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+          Are you sure you want to delete <strong id="deleteProjectTargetName" style="color: var(--text-main);"></strong>? This action cannot be undone and will remove all project lanes and track metadata.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelDelete">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmDeleteProject" style="background: var(--danger); box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);">
+          <span>Delete Permanently</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- ======================================================================
+       9. Modal: Audio Analysis Deep Report
+       ====================================================================== -->
+  <div class="modal-backdrop" id="audioAnalysisModal" role="dialog" aria-modal="true" aria-labelledby="analysisModalTitle">
+    <div class="modal-container" style="width: 720px; max-width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title" id="analysisModalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Audio Analysis Deep Report: <span id="reportTrackTitle" style="color: var(--accent);">Cyberpunk_Vocals_Stems.mp3</span></span>
+        </div>
+        <button class="icon-btn" id="btnCloseAnalysisModal" title="Close" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Report Tab Bar -->
+      <div style="display: flex; gap: 4px; padding: 10px 16px; background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color);">
+        <button class="tab-btn active" id="btnReportTabOverview" style="padding: 6px 12px;">Dynamics & Loudness</button>
+        <button class="tab-btn" id="btnReportTabCamelot" style="padding: 6px 12px;">Harmonic Camelot Matrix</button>
+        <button class="tab-btn" id="btnReportTabArrangement" style="padding: 6px 12px;">Arrangement & Energy Contour</button>
+      </div>
+
+      <div class="modal-body" style="max-height: 480px;">
+        
+        <!-- PANE 1: Dynamics & Loudness -->
+        <div id="paneReportOverview" style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div class="stat-box" style="padding: 12px;">
+              <span class="stat-box-label">Integrated Loudness</span>
+              <div class="stat-box-value tabular-nums" style="font-size: 16px;">
+                <span id="reportLufsIntegrated">-14.2</span>
+                <span class="stat-unit">LUFS</span>
+              </div>
+              <span style="font-size: 9px; color: var(--success); margin-top: 2px;">● Target Compliant (-14 LUFS)</span>
+            </div>
+
+            <div class="stat-box" style="padding: 12px;">
+              <span class="stat-box-label">True Peak Max</span>
+              <div class="stat-box-value tabular-nums" style="font-size: 16px;">
+                <span id="reportTruePeak">-0.8</span>
+                <span class="stat-unit">dBTP</span>
+              </div>
+              <span style="font-size: 9px; color: var(--accent); margin-top: 2px;">Clean Headroom (> -1.0 dBTP)</span>
+            </div>
+
+            <div class="stat-box" style="padding: 12px;">
+              <span class="stat-box-label">Loudness Range (LRA)</span>
+              <div class="stat-box-value tabular-nums" style="font-size: 16px;">
+                <span id="reportLra">6.8</span>
+                <span class="stat-unit">LU</span>
+              </div>
+              <span style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">Modern Radio Dynamic Profile</span>
+            </div>
+
+            <div class="stat-box" style="padding: 12px;">
+              <span class="stat-box-label">Short-Term Max</span>
+              <div class="stat-box-value tabular-nums" style="font-size: 16px;">
+                <span id="reportShortTerm">-11.5</span>
+                <span class="stat-unit">LUFS</span>
+              </div>
+              <span style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">3-second window peak</span>
+            </div>
+
+            <div class="stat-box" style="padding: 12px;">
+              <span class="stat-box-label">Momentary Max</span>
+              <div class="stat-box-value tabular-nums" style="font-size: 16px;">
+                <span id="reportMomentary">-9.8</span>
+                <span class="stat-unit">LUFS</span>
+              </div>
+              <span style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">400ms transient envelope</span>
+            </div>
+
+            <div class="stat-box" style="padding: 12px;">
+              <span class="stat-box-label">Crest Factor</span>
+              <div class="stat-box-value tabular-nums" style="font-size: 16px;">
+                <span>13.4</span>
+                <span class="stat-unit">dB</span>
+              </div>
+              <span style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">RMS to Peak Ratio</span>
+            </div>
+          </div>
+
+          <!-- Streaming Compliance Checklist -->
+          <div style="background: var(--active-panel-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px;">
+            <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Streaming Platform Target Compliance</span>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; font-size: 11px;">
+              <div style="display: flex; align-items: center; gap: 6px; color: var(--success);">
+                <span>✓ Spotify: -14 LUFS / -1 dBTP</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; color: var(--success);">
+                <span>✓ Apple Music: -16 LUFS (-0.2 LU)</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; color: var(--success);">
+                <span>✓ YouTube: -14 LUFS / -1 dBTP</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 2: Harmonic Camelot Matrix -->
+        <div id="paneReportCamelot" style="display: none; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; color: var(--text-secondary);">
+              Detected Root Key: <strong id="reportKeyName" style="color: var(--accent);">A Minor</strong> (Camelot <strong id="reportCamelotCode">8A</strong>)
+            </span>
+            <span class="status-analyzed-pill">94.0% Confidence</span>
+          </div>
+
+          <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
+            The Camelot Wheel maps musical keys by harmonic compatibility. Tracks in adjacent numbered sectors (e.g. 7A, 9A) or the same sector relative major/minor (8B) can be mixed smoothly without dissonant clashing.
+          </p>
+
+          <div class="camelot-wheel-circle" id="camelotTilesGrid">
+            <!-- Dynamically populated or rendered -->
+            <div class="camelot-tile compatible">
+              <span class="camelot-code">7A</span>
+              <span class="camelot-name">D min</span>
+            </div>
+            <div class="camelot-tile active">
+              <span class="camelot-code">8A</span>
+              <span class="camelot-name">A min (Active)</span>
+            </div>
+            <div class="camelot-tile compatible">
+              <span class="camelot-code">9A</span>
+              <span class="camelot-name">E min</span>
+            </div>
+            <div class="camelot-tile compatible">
+              <span class="camelot-code">8B</span>
+              <span class="camelot-name">C maj</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 3: Arrangement & Energy Contour -->
+        <div id="paneReportArrangement" style="display: none; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; color: var(--text-secondary);">Song Arrangement Structure & Energy Progression</span>
+            <span class="tabular-nums" style="font-size: 12px; font-weight: 700; color: var(--accent);">Peak: 84%</span>
+          </div>
+
+          <div class="energy-curve-container" style="padding: 12px;">
+            <svg style="width: 100%; height: 90px; display: block;" viewBox="0 0 600 90" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="deepEnergyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.8"/>
+                  <stop offset="50%" stop-color="#8B5CF6" stop-opacity="0.6"/>
+                  <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.05"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,75 Q50,65 100,55 T200,20 T300,10 T400,35 T500,8 T600,65 L600,90 L0,90 Z" fill="url(#deepEnergyGrad)"/>
+              <path d="M0,75 Q50,65 100,55 T200,20 T300,10 T400,35 T500,8 T600,65" fill="none" stroke="#22D3EE" stroke-width="2.5"/>
+            </svg>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; font-size: 10px; text-align: center;">
+            <div style="background: var(--active-panel-bg); padding: 6px; border-radius: 4px;">
+              <span style="color: var(--text-muted); display: block;">Intro</span>
+              <strong style="color: var(--text-main);">00:00 - 35%</strong>
+            </div>
+            <div style="background: var(--active-panel-bg); padding: 6px; border-radius: 4px;">
+              <span style="color: var(--text-muted); display: block;">Verse 1</span>
+              <strong style="color: var(--text-main);">00:25 - 55%</strong>
+            </div>
+            <div style="background: var(--active-panel-bg); padding: 6px; border-radius: 4px;">
+              <span style="color: var(--text-muted); display: block;">Build Up</span>
+              <strong style="color: var(--accent);">00:50 - 75%</strong>
+            </div>
+            <div style="background: var(--active-panel-bg); padding: 6px; border-radius: 4px; border: 1px solid rgba(34, 211, 238, 0.3);">
+              <span style="color: var(--accent); display: block;">Drop 1</span>
+              <strong style="color: #FFFFFF;">01:15 - 95%</strong>
+            </div>
+            <div style="background: var(--active-panel-bg); padding: 6px; border-radius: 4px;">
+              <span style="color: var(--text-muted); display: block;">Bridge</span>
+              <strong style="color: var(--text-main);">01:45 - 48%</strong>
+            </div>
+            <div style="background: var(--active-panel-bg); padding: 6px; border-radius: 4px;">
+              <span style="color: var(--text-muted); display: block;">Outro</span>
+              <strong style="color: var(--text-main);">02:40 - 30%</strong>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnDismissAnalysisModal">Close Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       10. Modal: Auto Mix Studio Assistant (Phase 6)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="autoMixModal" role="dialog" aria-modal="true" aria-labelledby="autoMixModalTitle">
+    <div class="modal-container" style="width: 620px; max-width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title" id="autoMixModalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <span>Auto Mix Studio Assistant</span>
+          <span class="brand-badge" style="background: rgba(139, 92, 246, 0.2); color: #C4B5FD;">SOT Phase 6</span>
+        </div>
+        <button class="icon-btn" id="btnCloseAutoMixModal" title="Close" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+          Intelligent balance pass analyzes all 4 active stem tracks, equalizes frequency space, aligns dynamic range, and balances the stereo field automatically.
+        </p>
+
+        <!-- Style Presets Grid -->
+        <div class="preset-cards-grid" id="autoMixPresetsGrid">
+          <div class="auto-mix-preset-card selected" data-preset="radio_pop">
+            <div class="preset-card-header">
+              <span class="preset-name">Radio Pop Balance</span>
+              <span class="status-analyzed-pill">Default</span>
+            </div>
+            <p class="preset-desc">Vocal-forward clarity with punchy kicks, controlled low-end, and wide stereo synths.</p>
+          </div>
+
+          <div class="auto-mix-preset-card" data-preset="club_bass">
+            <div class="preset-card-header">
+              <span class="preset-name">Club & Bass Heavy</span>
+            </div>
+            <p class="preset-desc">Maximized sub-bass impact, aggressive sidechain compression feel, and saturated transients.</p>
+          </div>
+
+          <div class="auto-mix-preset-card" data-preset="vocal_lead">
+            <div class="preset-card-header">
+              <span class="preset-name">Vocal-Forward Suno</span>
+            </div>
+            <p class="preset-desc">Accentuates Suno AI vocal presence (+1.5 dB), ducks rhythm tracks slightly, and warms midrange.</p>
+          </div>
+
+          <div class="auto-mix-preset-card" data-preset="ambient_chill">
+            <div class="preset-card-header">
+              <span class="preset-name">Ambient Chillout</span>
+            </div>
+            <p class="preset-desc">Expansive lush reverbs, smooth gentle compression, rolled-off high frequencies, and wide panorama.</p>
+          </div>
+        </div>
+
+        <!-- Stem Balance Target Preview -->
+        <div class="stem-balance-preview-box">
+          <div style="font-size: 11px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">Target Stem Gain & Width Optimization</div>
+          <div class="balance-bars-grid">
+            <div class="balance-bar-row">
+              <span class="balance-track-label">01 • Lead Vocals</span>
+              <div class="balance-meter-track"><div class="balance-meter-fill" id="previewBar1" style="width: 85%;"></div></div>
+              <span class="balance-val tabular-nums" id="previewVal1">0.0 dB</span>
+            </div>
+            <div class="balance-bar-row">
+              <span class="balance-track-label">02 • Synth & Bass</span>
+              <div class="balance-meter-track"><div class="balance-meter-fill" id="previewBar2" style="width: 72%;"></div></div>
+              <span class="balance-val tabular-nums" id="previewVal2">-2.0 dB</span>
+            </div>
+            <div class="balance-bar-row">
+              <span class="balance-track-label">03 • Cyber Drums</span>
+              <div class="balance-meter-track"><div class="balance-meter-fill" id="previewBar3" style="width: 78%;"></div></div>
+              <span class="balance-val tabular-nums" id="previewVal3">-1.0 dB</span>
+            </div>
+            <div class="balance-bar-row">
+              <span class="balance-track-label">04 • FX & Drops</span>
+              <div class="balance-meter-track"><div class="balance-meter-fill" id="previewBar4" style="width: 58%;"></div></div>
+              <span class="balance-val tabular-nums" id="previewVal4">-3.5 dB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Processing Options Checkboxes -->
+        <div style="display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: var(--text-secondary);">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="chkAutoEq" checked>
+            <span>Smart EQ Sweetening</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="chkAutoDynamics" checked>
+            <span>Dynamic Compression</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="chkAutoStereo" checked>
+            <span>Stereo Width Balancing</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelAutoMix">Cancel</button>
+        <button type="button" class="btn btn-secondary" id="btnPreviewAutoMix" title="Preview Mix Without Saving">
+          <span>Preview Mix</span>
+        </button>
+        <button type="button" class="btn btn-primary" id="btnConfirmAutoMix">
+          <span>Apply Auto Mix</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       11. Modal: Export Studio Mix (Phase 7)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+    <div class="modal-container" style="width: 540px; max-width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title" id="exportModalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Export Master Mix</span>
+          <span class="brand-badge" style="background: rgba(34, 211, 238, 0.15); color: #22D3EE;">SOT Phase 7</span>
+        </div>
+        <button class="icon-btn" id="btnCloseExportModal" title="Close" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Export Configuration Body -->
+      <div class="modal-body" id="exportConfigSection">
+        <div class="form-group">
+          <label class="form-label">Export Audio Format</label>
+          <div class="export-format-grid" id="exportFormatGroup" role="radiogroup">
+            <div class="format-card selected" data-format="wav" id="formatWavCard" role="radio" aria-checked="true">
+              <div class="format-title-wrap">
+                <span class="format-ext">WAV</span>
+                <span class="format-badge">Lossless Studio Master</span>
+              </div>
+              <p class="format-desc">24-bit PCM Uncompressed Audio • Zero Artifacts • Best for Streaming & Archives</p>
+            </div>
+            <div class="format-card" data-format="mp3" id="formatMp3Card" role="radio" aria-checked="false">
+              <div class="format-title-wrap">
+                <span class="format-ext">MP3</span>
+                <span class="format-badge">320 kbps CBR</span>
+              </div>
+              <p class="format-desc">High-Definition Compressed Audio • Universal Playback • Compact Size</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="exportSampleRate">Sample Rate</label>
+            <select class="form-select" id="exportSampleRate">
+              <option value="44100" selected>44.1 kHz (CD Audio Standard)</option>
+              <option value="48000">48.0 kHz (Video / Broadcast)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="exportBitDepth">Bit Depth / Quality</label>
+            <select class="form-select" id="exportBitDepth">
+              <option value="24" selected>24-bit (High Dynamic Range)</option>
+              <option value="16">16-bit (Standard CD Dithered)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--text-main);">
+            <input type="checkbox" id="chkExportNormalize" checked>
+            <span>Normalize to Streaming Target (<strong>-14.0 LUFS</strong> with -0.1 dBTP Limiter ceiling)</span>
+          </label>
+        </div>
+
+        <div class="divider-horizontal" style="margin: 10px 0;"></div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputExportTitle">Track Title</label>
+          <input type="text" class="form-input" id="inputExportTitle" value="Cyberpunk Drift (Suno Final Mix)">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" for="inputExportArtist">Artist / Creator</label>
+            <input type="text" class="form-input" id="inputExportArtist" value="Suno AI × Crib Studio">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inputExportAlbum">Project Album</label>
+            <input type="text" class="form-input" id="inputExportAlbum" value="Suno Stems Vol. 1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Stage Export Progress Simulation State -->
+      <div class="modal-body" id="exportProgressSection" style="display: none;">
+        <div class="export-pipeline-box">
+          <div class="export-step-row">
+            <div class="pulse-dot" style="background: var(--accent);"></div>
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-main);" id="exportStageText">Summing 4 Stem Tracks (1/4)...</span>
+            <span class="tabular-nums" style="font-size: 13px; font-weight: 700; color: var(--accent); margin-left: auto;" id="exportProgressPct">15%</span>
+          </div>
+
+          <div class="progress-track" style="margin: 12px 0 16px 0; height: 8px;">
+            <div class="progress-fill" id="exportProgressBar" style="width: 15%; background: linear-gradient(90deg, #8B5CF6, #22D3EE);"></div>
+          </div>
+
+          <div class="export-pipeline-stages">
+            <div class="pipeline-node active" id="nodeStage1">1. Sum Stems</div>
+            <div class="pipeline-node" id="nodeStage2">2. Master DSP</div>
+            <div class="pipeline-node" id="nodeStage3">3. EBU Normalization</div>
+            <div class="pipeline-node" id="nodeStage4">4. Stream Encode</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Complete State -->
+      <div class="modal-body" id="exportCompleteSection" style="display: none;">
+        <div class="export-complete-box">
+          <div class="export-complete-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-top: 8px;" id="completeFilename">Cyberpunk_Drift_Master.wav</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="completeFileMeta">24-bit / 44.1 kHz • 42.5 MB • Stereo Master</div>
+
+          <div class="complete-actions-group" style="margin-top: 16px; display: flex; gap: 8px; justify-content: center;">
+            <button class="btn btn-primary" id="btnDownloadMix">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download Master File</span>
+            </button>
+            <button class="btn btn-secondary" id="btnCopyMixLink">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy Share Link</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" id="exportModalFooter">
+        <button type="button" class="btn btn-secondary" id="btnCancelExport">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnStartExport">
+          <span>Start Export</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       12. Modal: Mix Presets Manager (Phase 7)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="presetsModal" role="dialog" aria-modal="true" aria-labelledby="presetsModalTitle">
+    <div class="modal-container" style="width: 580px; max-width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title" id="presetsModalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          <span>Studio Mixing Presets</span>
+          <span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); color: #FCD34D;">Save / Load</span>
+        </div>
+        <button class="icon-btn" id="btnClosePresetsModal" title="Close" aria-label="Close Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Save Current Mix Accordion/Card -->
+        <div class="save-preset-card">
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Save Current Studio Mix as Preset</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px;">
+            <input type="text" class="form-input" id="inputPresetName" placeholder="Preset Name (e.g. My Vocal Punch)" style="height: 30px; font-size: 11px;">
+            <input type="text" class="form-input" id="inputPresetDesc" placeholder="Description (optional)" style="height: 30px; font-size: 11px;">
+            <button class="btn btn-primary btn-xs" id="btnSaveCurrentPreset" style="height: 30px;">
+              <span>Save Preset</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin: 14px 0 8px 0;">Available Presets</div>
+
+        <!-- Presets List -->
+        <div class="presets-list-container" id="presetsListContainer">
+          <!-- Dynamically populated via JavaScript -->
+        </div>
+
+        <!-- Presets Backup & Import Section (Phase 8) -->
+        <div class="preset-backup-row" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-size: 11px; color: var(--text-muted);">Backup or share custom mix presets (JSON)</div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-xs" id="btnExportPresetsJson" title="Download user presets as JSON file">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Export JSON</span>
+            </button>
+            <button class="btn btn-secondary btn-xs" id="btnImportPresetsJson" title="Import user presets from JSON file">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Import JSON</span>
+            </button>
+            <input type="file" id="inputImportPresets" accept=".json,application/json" style="display: none;">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnDismissPresetsModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Studio JavaScript Engine -->
+  <script src="app.js"></script>
+</body>
+</html>

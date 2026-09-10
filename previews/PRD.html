@@ -1,0 +1,153 @@
+<!doctype html><html><head><meta charset='utf-8'><title>PRD</title><style>
+body{margin:0;background:#08090D;color:#F8FAFC;font-family:Inter,system-ui,sans-serif;line-height:1.65}
+main{max-width:1000px;margin:40px auto;padding:0 28px}
+h1,h2,h3{color:#F8FAFC} h1{border-bottom:1px solid #272C36;padding-bottom:16px}
+h2{color:#A78BFA;margin-top:32px} code{color:#22D3EE;background:#13161D;padding:2px 6px;border-radius:6px}
+pre{white-space:pre-wrap;background:#13161D;border:1px solid #272C36;padding:20px;border-radius:14px}
+.card{background:#13161D;border:1px solid #272C36;border-radius:16px;padding:24px;box-shadow:0 0 30px #8B5CF622}
+</style></head><body><main><div class='card'><h1>SOT --- PRD</h1>
+<h2>Suno Music Mixing Studio</h2>
+<p>**Document status:** SOT v1.0 --- Planning/Approval Gate\</p>
+<p>**Product type:** Browser-based music mixing studio\</p>
+<p>**Frontend:** HTML5, CSS3, Vanilla JavaScript\</p>
+<p>**Primary UX:** Modern futuristic premium SaaS, dark studio UI</p>
+<h2>1. Product Vision</h2>
+<p>Suno Music Mixing Studio is a browser-based workspace for organizing,</p>
+<p>analyzing, editing, synchronizing, mixing, previewing, and exporting</p>
+<p>songs generated with Suno. The product should feel like a professional</p>
+<p>music-production environment while remaining approachable and focused on</p>
+<p>waveform/timeline workflows.</p>
+<h2>2. Core Goals</h2>
+<ul>
+<li>  Import and manage a personal music library.</li>
+<li>  Analyze BPM, musical key, and energy.</li>
+<li>  Edit and arrange multiple tracks on a timeline.</li>
+<li>  Mix tracks with volume/gain, EQ, fades, crossfades, automation, and</li>
+</ul>
+<p>    effects.</p>
+<ul>
+<li>  Assist BPM/key matching and beat synchronization.</li>
+<li>  Provide Smart Transition, Intelligent Trimming, Loudness</li>
+</ul>
+<p>    Normalization, and Auto Mix.</p>
+<ul>
+<li>  Preview the master mix before export.</li>
+<li>  Export MP3 and WAV.</li>
+<li>  Save projects, presets, keyboard shortcuts, and autosave state.</li>
+</ul>
+<h2>3. Non-Goals for Initial Frontend Phase</h2>
+<ul>
+<li>  Server-side audio rendering.</li>
+<li>  User authentication/payment systems.</li>
+<li>  Cloud storage implementation.</li>
+<li>  Third-party API integrations.</li>
+<li>  Full DAW-grade DSP engine beyond what can be reasonably represented</li>
+</ul>
+<p>    in the browser.</p>
+<ul>
+<li>  Any feature outside the approved feature list.</li>
+</ul>
+<h2>4. Information Architecture</h2>
+<p>Primary application shell: 1. Top Bar 2. Left Sidebar 3. Main Workspace</p>
+<p>4. Right Inspector/Control Panel 5. Bottom Transport + Timeline/Status</p>
+<p>Area</p>
+<p>Primary navigation: - Dashboard / Projects - Music Library - Mixer</p>
+<p>Studio - Presets - Settings</p>
+<h2>5. Approved Feature Scope</h2>
+<h3>Project Management</h3>
+<p>Create, rename, duplicate, open, save, autosave, delete, and recover</p>
+<p>projects.</p>
+<h3>Music Library</h3>
+<p>Browse imported songs, search/filter, sort, view metadata, BPM, key,</p>
+<p>energy, duration, and project usage.</p>
+<h3>Upload Lagu Suno</h3>
+<p>Drag-and-drop and file picker upload flow with validation, progress</p>
+<p>state, metadata preview, and library insertion.</p>
+<h3>Audio Analysis</h3>
+<p>Analysis status, duration, waveform generation state, BPM, key, energy,</p>
+<p>and loudness summary.</p>
+<h3>BPM Detection</h3>
+<p>Display detected BPM, confidence/state, editable BPM override, and sync</p>
+<p>readiness.</p>
+<h3>Key Detection</h3>
+<p>Display detected key, confidence/state, editable key override, and</p>
+<p>compatibility indicator.</p>
+<h3>Energy Detection</h3>
+<p>Visual energy score/level and energy curve representation.</p>
+<h3>Waveform Editor</h3>
+<p>Zoom, pan, selection, trim, split, fade handles, playhead, beat markers,</p>
+<p>and region operations.</p>
+<h3>Multi-Track Timeline</h3>
+<p>Multiple tracks, clips, lane headers, snapping, playhead, markers,</p>
+<p>scrolling, zoom, and track controls.</p>
+<h3>Track Mixer</h3>
+<p>Per-track channel strip with mute, solo, volume, gain, pan, meter, EQ,</p>
+<p>effects, and automation access.</p>
+<h3>Volume &amp; Gain</h3>
+<p>Independent clip/track level controls with visual meters.</p>
+<h3>EQ</h3>
+<p>Three-band minimum UI: low, mid, high; frequency/gain controls may be</p>
+<p>represented with compact controls and a visual EQ curve.</p>
+<h3>Fade In / Fade Out</h3>
+<p>Clip-level fade handles and numeric/visual duration controls.</p>
+<h3>Crossfade</h3>
+<p>Overlap-based crossfade with adjustable curve/duration.</p>
+<h3>BPM Matching</h3>
+<p>Suggested target BPM and adjustment state.</p>
+<h3>Key Matching</h3>
+<p>Compatibility indicator and suggested compatible key.</p>
+<h3>Beat Synchronization</h3>
+<p>Grid/beat marker alignment and snap-to-beat behavior.</p>
+<h3>Smart Transition</h3>
+<p>Suggested transition between adjacent clips based on BPM, key, energy,</p>
+<p>and timing.</p>
+<h3>Loudness Normalization</h3>
+<p>Target loudness control and normalization preview/status.</p>
+<h3>Intelligent Trimming</h3>
+<p>Detect low-signal/silence-like regions and suggest trim boundaries.</p>
+<h3>Auto Mix</h3>
+<p>One-click assisted balance workflow with preview and non-destructive</p>
+<p>application.</p>
+<h3>Audio Effects</h3>
+<p>Effect rack UI with approved lightweight effect slots and enable/bypass</p>
+<p>state.</p>
+<h3>Automation</h3>
+<p>Track/clip parameter automation lanes with points and curves.</p>
+<h3>Master Preview</h3>
+<p>Master transport, stereo level meter, loudness summary, clipping</p>
+<p>warning, and final listening state.</p>
+<h3>MP3 Export / WAV Export</h3>
+<p>Export modal with format, quality/sample-rate controls appropriate to</p>
+<p>the frontend prototype, progress, and completion state.</p>
+<h3>Mix Presets</h3>
+<p>Save/load/delete mixing presets.</p>
+<h3>Keyboard Shortcuts</h3>
+<p>Shortcut reference overlay and core transport/editing shortcuts.</p>
+<h3>Autosave</h3>
+<p>Visible autosave state, timestamp, saving indicator, and recovery state.</p>
+<h3>Modern Futuristic UI</h3>
+<p>Premium dark SaaS studio with restrained neon accents, glass-like</p>
+<p>surfaces, soft glow, rounded corners, and high information density</p>
+<p>without visual clutter.</p>
+<h2>6. Primary User Flow</h2>
+<p>Open/Create Project → Upload Suno Songs → Analyze → Review</p>
+<p>BPM/Key/Energy → Add to Timeline → Edit/Trim → Arrange → BPM/Key Match →</p>
+<p>Beat Sync → Crossfade/Smart Transition → Mix → Effects/Automation →</p>
+<p>Master Preview → Normalize → Export MP3/WAV → Save Project.</p>
+<h2>7. Responsive Behavior</h2>
+<p>Desktop-first. Minimum supported composition should remain usable at</p>
+<p>approximately 1280px width. At narrower widths, secondary inspectors may</p>
+<p>collapse into drawers; the timeline remains the dominant workspace.</p>
+<h2>8. State Requirements</h2>
+<p>Every major feature must have: default, hover, active, selected,</p>
+<p>disabled, loading, success, warning, and error states where applicable.</p>
+<h2>9. Acceptance Criteria</h2>
+<ul>
+<li>  All 29 approved feature areas are represented in the product UI.</li>
+<li>  No unapproved feature is introduced.</li>
+<li>  Timeline and waveform remain visually dominant.</li>
+<li>  UI uses the approved color system consistently.</li>
+<li>  HTML/CSS/JS only.</li>
+<li>  Interactions are modular and understandable.</li>
+<li>  Prototype must be runnable locally without a build system.</li>
+</ul></div></main></body></html>

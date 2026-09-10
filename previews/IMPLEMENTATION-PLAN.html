@@ -1,0 +1,87 @@
+<!doctype html><html><head><meta charset='utf-8'><title>IMPLEMENTATION-PLAN</title><style>
+body{margin:0;background:#08090D;color:#F8FAFC;font-family:Inter,system-ui,sans-serif;line-height:1.65}
+main{max-width:1000px;margin:40px auto;padding:0 28px}
+h1,h2,h3{color:#F8FAFC} h1{border-bottom:1px solid #272C36;padding-bottom:16px}
+h2{color:#A78BFA;margin-top:32px} code{color:#22D3EE;background:#13161D;padding:2px 6px;border-radius:6px}
+pre{white-space:pre-wrap;background:#13161D;border:1px solid #272C36;padding:20px;border-radius:14px}
+.card{background:#13161D;border:1px solid #272C36;border-radius:16px;padding:24px;box-shadow:0 0 30px #8B5CF622}
+</style></head><body><main><div class='card'><h1>SOT --- IMPLEMENTATION PLAN</h1>
+<h2>Suno Music Mixing Studio</h2>
+<p>**Execution rule:** Each phase is gated. The assistant MUST stop after</p>
+<p>the current phase and request explicit user approval before starting the</p>
+<p>next phase.</p>
+<h2>Phase 0 --- SOT Baseline</h2>
+<p>Deliverables: - PRD.md - UI-GUIDELINE.md - IMPLEMENTATION-PLAN.md -</p>
+<p>AGENTS.md - EXECUTION-PROMPT.md - previews for all documents - ZIP</p>
+<p>package</p>
+<p>Gate: User approval required to begin Phase 1.</p>
+<h2>Phase 1 --- Project Skeleton</h2>
+<p>Build only: - index.html - styles.css - app.js - assets/ - modular JS</p>
+<p>structure if needed - base app shell -</p>
+<p>sidebar/topbar/timeline/inspector/transport placeholders</p>
+<p>Validation: - Runs locally by opening index.html. - No build tooling</p>
+<p>required. - Approved color tokens are implemented. - No feature logic</p>
+<p>beyond structural interactions.</p>
+<p>Gate: User approval required.</p>
+<h2>Phase 2 --- Core Project &amp; Library</h2>
+<p>Implement: - project list/create/open/rename/delete UI - music library -</p>
+<p>upload flow - metadata cards - analysis status - autosave indicators</p>
+<p>Gate: User approval required.</p>
+<h2>Phase 3 --- Audio Analysis UI</h2>
+<p>Implement UI/state simulation for: - BPM - key - energy - loudness -</p>
+<p>waveform generation state</p>
+<p>The initial frontend may use mock/demo data where actual browser DSP is</p>
+<p>not yet implemented.</p>
+<p>Gate: User approval required.</p>
+<h2>Phase 4 --- Timeline &amp; Waveform</h2>
+<p>Implement: - multi-track lanes - clips - waveform visualization -</p>
+<p>zoom/pan - selection - split/trim - fades - beat markers - snap -</p>
+<p>playhead</p>
+<p>Gate: User approval required.</p>
+<h2>Phase 5 --- Mixer</h2>
+<p>Implement: - volume/gain - pan - meters - EQ - effects rack -</p>
+<p>mute/solo - automation UI</p>
+<p>Gate: User approval required.</p>
+<h2>Phase 6 --- Intelligent Mixing Tools</h2>
+<p>Implement: - BPM matching - key matching - beat synchronization - Smart</p>
+<p>Transition - Intelligent Trimming - Loudness Normalization - Auto Mix</p>
+<p>These begin as deterministic frontend interactions/demo logic unless</p>
+<p>real DSP is explicitly approved later.</p>
+<p>Gate: User approval required.</p>
+<h2>Phase 7 --- Master &amp; Export</h2>
+<p>Implement: - master preview - master meter - export modal - MP3/WAV</p>
+<p>export UI and browser-capable processing where feasible -</p>
+<p>completion/error states</p>
+<p>Gate: User approval required.</p>
+<h2>Phase 8 --- Presets &amp; Shortcuts</h2>
+<p>Implement: - mix presets - keyboard shortcut overlay - shortcut</p>
+<p>handling - save/load/delete preset state</p>
+<p>Gate: User approval required.</p>
+<h2>Phase 9 --- QA &amp; Polish</h2>
+<p>Validate: - visual consistency - responsive behavior - keyboard</p>
+<p>accessibility - state coverage - interaction regressions - performance -</p>
+<p>no scope creep</p>
+<p>Gate: User approval required before final packaging.</p>
+<h2>Phase 10 --- Final Package</h2>
+<p>Deliver: - clean project folder - README - final ZIP - known</p>
+<p>limitations - run instructions - feature checklist</p>
+<h2>Technical Constraints</h2>
+<ul>
+<li>  HTML, CSS, JavaScript only.</li>
+<li>  No framework unless explicitly approved later.</li>
+<li>  No external dependency unless explicitly approved.</li>
+<li>  Modular code preferred.</li>
+<li>  No backend required for the initial frontend prototype.</li>
+<li>  No implementation outside approved PRD scope.</li>
+</ul>
+<h2>Token-Efficiency Rules</h2>
+<ul>
+<li>  Read SOT before modifying code.</li>
+<li>  Work one phase at a time.</li>
+<li>  Do not rewrite unrelated files.</li>
+<li>  Reuse existing components/tokens.</li>
+<li>  Keep patches targeted.</li>
+<li>  Avoid repeating full documents in prompts.</li>
+<li>  Reference document sections instead of duplicating requirements.</li>
+<li>  Stop at every approval gate.</li>
+</ul></div></main></body></html>

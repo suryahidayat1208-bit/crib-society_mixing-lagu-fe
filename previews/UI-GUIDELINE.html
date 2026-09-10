@@ -1,0 +1,149 @@
+<!doctype html><html><head><meta charset='utf-8'><title>UI-GUIDELINE</title><style>
+body{margin:0;background:#08090D;color:#F8FAFC;font-family:Inter,system-ui,sans-serif;line-height:1.65}
+main{max-width:1000px;margin:40px auto;padding:0 28px}
+h1,h2,h3{color:#F8FAFC} h1{border-bottom:1px solid #272C36;padding-bottom:16px}
+h2{color:#A78BFA;margin-top:32px} code{color:#22D3EE;background:#13161D;padding:2px 6px;border-radius:6px}
+pre{white-space:pre-wrap;background:#13161D;border:1px solid #272C36;padding:20px;border-radius:14px}
+.card{background:#13161D;border:1px solid #272C36;border-radius:16px;padding:24px;box-shadow:0 0 30px #8B5CF622}
+</style></head><body><main><div class='card'><h1>SOT --- UI-GUIDELINE</h1>
+<h2>Suno Music Mixing Studio</h2>
+<h2>1. Visual Direction</h2>
+<p>**Keywords:** Dark Futuristic, Premium SaaS, Professional Music Studio,</p>
+<p>Neon Purple + Cyan, High Contrast, Minimalist, Clean, Light</p>
+<p>Glassmorphism, Soft Glow, Rounded Corners, Subtle Gradients, Not</p>
+<p>Crowded.</p>
+<h2>2. Locked Color Tokens</h2>
+<ul>
+<li>  Background: `#08090D`</li>
+<li>  Sidebar: `#0D0F14`</li>
+<li>  Panel/Card: `#13161D`</li>
+<li>  Active Panel: `#1A1E27`</li>
+<li>  Border: `#272C36`</li>
+<li>  Primary: `#8B5CF6`</li>
+<li>  Primary Hover: `#A78BFA`</li>
+<li>  Accent: `#22D3EE`</li>
+<li>  Success: `#22C55E`</li>
+<li>  Warning: `#F59E0B`</li>
+<li>  Danger: `#EF4444`</li>
+<li>  Main Text: `#F8FAFC`</li>
+<li>  Secondary Text: `#94A3B8`</li>
+<li>  Muted Text: `#64748B`</li>
+<li>  Waveform: `#8B5CF6`</li>
+<li>  Beat Marker: `#22D3EE`</li>
+<li>  Playhead: `#FFFFFF`</li>
+<li>  Progress: `#A78BFA`</li>
+<li>  Main Button: `#8B5CF6`</li>
+<li>  Button Hover: `#A78BFA`</li>
+</ul>
+<h2>3. Layout</h2>
+<ul>
+<li>  App shell: full viewport, overflow controlled.</li>
+<li>  Sidebar: compact, persistent on desktop.</li>
+<li>  Top bar: project identity, autosave state, undo/redo, master</li>
+</ul>
+<p>    preview/export actions.</p>
+<ul>
+<li>  Main content: waveform/timeline workspace.</li>
+<li>  Right inspector: context-sensitive controls.</li>
+<li>  Bottom transport: play/pause, stop, time, BPM, snap, zoom, master</li>
+</ul>
+<p>    meter.</p>
+<h2>4. Visual Hierarchy</h2>
+<p>1.  Timeline/waveform</p>
+<p>2.  Transport/playhead</p>
+<p>3.  Track controls</p>
+<p>4.  Inspector controls</p>
+<p>5.  Secondary metadata</p>
+<p>6.  Decorative effects</p>
+<p>Decorative glow must never compete with waveform readability.</p>
+<h2>5. Components</h2>
+<h3>Navigation</h3>
+<p>Icon + label, selected state, compact tooltips.</p>
+<h3>Cards</h3>
+<p>Graphite surface, subtle border, 12--16px radius, restrained</p>
+<p>shadow/glow.</p>
+<h3>Buttons</h3>
+<p>Primary purple for decisive actions. Cyan reserved for analytical/sync</p>
+<p>states. Danger only for destructive actions.</p>
+<h3>Inputs</h3>
+<p>Dark surface, visible focus ring, concise labels, unit suffixes where</p>
+<p>useful.</p>
+<h3>Sliders</h3>
+<p>Thin track, bright active segment, clear thumb, numeric readout.</p>
+<h3>Meters</h3>
+<p>Vertical/horizontal level meters with warning/clipping state.</p>
+<h3>Waveform</h3>
+<p>Purple waveform, cyan beat markers, white playhead, selection overlay,</p>
+<p>readable clip labels.</p>
+<h3>Timeline</h3>
+<p>Track lanes with clear lane boundaries. Clips use subtle gradients and</p>
+<p>strong selection outlines. Grid should be visible but low contrast.</p>
+<h3>Mixer Channel</h3>
+<p>Compact vertical strip: name, meter, volume, pan, mute/solo, EQ/effects</p>
+<p>access.</p>
+<h3>Modal</h3>
+<p>Dark graphite panel with strong title hierarchy and one primary action.</p>
+<h3>Toast</h3>
+<p>Short-lived status messages for save, upload, analysis, export, and</p>
+<p>errors.</p>
+<h2>6. Typography</h2>
+<p>Use a modern sans-serif system stack. Suggested hierarchy: - App title:</p>
+<p>18--22px, semibold. - Section title: 14--16px, semibold. - Body:</p>
+<p>12--14px. - Metadata: 10--12px. - Numeric studio values: medium/semibold</p>
+<p>with tabular numerals when available.</p>
+<h2>7. Spacing</h2>
+<p>Use a consistent 4px base scale. Typical gaps: 4, 8, 12, 16, 20, 24,</p>
+<p>32px.</p>
+<h2>8. Radius</h2>
+<ul>
+<li>  Controls: 8--10px</li>
+<li>  Cards/panels: 12--16px</li>
+<li>  Pills/status: 999px</li>
+</ul>
+<h2>9. Interaction States</h2>
+<p>Every interactive control should visibly communicate hover, focus,</p>
+<p>active, disabled, loading, success, warning, and error as relevant.</p>
+<h2>10. UX Rules</h2>
+<ul>
+<li>  Never hide critical transport state.</li>
+<li>  Keep BPM, key, project name, autosave, and master state</li>
+</ul>
+<p>    discoverable.</p>
+<ul>
+<li>  Prefer inline editing over unnecessary modals.</li>
+<li>  Preserve context when opening inspectors.</li>
+<li>  Avoid excessive animations; use short, purposeful transitions.</li>
+<li>  Keyboard focus must remain visible.</li>
+<li>  Destructive actions require confirmation.</li>
+</ul>
+<h2>11. Accessibility</h2>
+<ul>
+<li>  Maintain strong text contrast.</li>
+<li>  Do not rely on color alone for state.</li>
+<li>  Provide labels/tooltips for icon-only controls.</li>
+<li>  Maintain logical keyboard navigation.</li>
+<li>  Use semantic HTML where possible.</li>
+</ul>
+<h2>12. Screen Blueprint</h2>
+<h3>A. Project Dashboard</h3>
+<p>Projects grid/list, recent projects, create project, search, library</p>
+<p>shortcut.</p>
+<h3>B. Music Library</h3>
+<p>Search/filter header, upload CTA, song table/list, analysis status,</p>
+<p>metadata columns.</p>
+<h3>C. Mixing Studio</h3>
+<p>Top bar → sidebar → timeline/waveform → right inspector →</p>
+<p>mixer/transport. Timeline occupies the majority of the viewport.</p>
+<h3>D. Export</h3>
+<p>Format selector, quality controls, destination/name, normalization</p>
+<p>state, progress, completion.</p>
+<h2>13. UI Anti-Patterns</h2>
+<ul>
+<li>  Excessive neon.</li>
+<li>  Heavy glass blur.</li>
+<li>  Too many cards inside cards.</li>
+<li>  Oversized typography.</li>
+<li>  Low-contrast timeline labels.</li>
+<li>  Decorative animations during editing.</li>
+<li>  Unapproved feature panels.</li>
+</ul></div></main></body></html>
