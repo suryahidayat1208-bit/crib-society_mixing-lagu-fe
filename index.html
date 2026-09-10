@@ -83,6 +83,14 @@
           </svg>
           <span data-i18n="topbar.master_preview">Pratinjau Master</span>
         </button>
+        <button class="btn btn-emerald" id="btnQuickDownloadHeader" title="Download Musik Langsung (WAV 1-Klik)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span data-i18n="topbar.quick_download">📥 Download Lagu</span>
+        </button>
         <button class="btn btn-primary" id="btnExport" title="Export MP3/WAV">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -554,6 +562,31 @@
                   <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
               </button>
+            </div>
+          </div>
+
+          <!-- Beginner-Friendly Mixer Action Toolbar -->
+          <div class="mixer-beginner-toolbar" id="mixerBeginnerToolbar">
+            <div class="mixer-toolbar-group">
+              <button class="btn btn-emerald btn-sm" id="btnMixerDownloadMaster" title="Download Hasil Lagu Langsung (1-Klik WAV)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>📥 Download Lagu (WAV)</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnMixerOpenClarity" title="Buka Menu Pembersih Suara Anti-Mendem">
+                <span>🧹 Pembersih Suara</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnMixerOpenVoice" title="Buka Menu Karakter Pengubah Suara">
+                <span>🎙️ Pengubah Suara</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnMixerAutoMix" title="Seimbangkan Volume Seluruh Track Secara Otomatis">
+                <span>⚡ Auto-Mix Seimbang</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnMixerSplit" title="Gunting Klip Musik di Garis Waktu">
+                <span>✂️ Gunting Lagu</span>
+              </button>
+            </div>
+            <div class="mixer-toolbar-help">
+              <span>💡 Atur Bass, Vokal, & Treble di bawah lalu klik <strong>Download Lagu</strong></span>
             </div>
           </div>
 
@@ -2416,11 +2449,17 @@
         </div>
       </div>
 
-      <div class="modal-footer" id="exportModalFooter">
-        <button type="button" class="btn btn-secondary" id="btnCancelExport">Cancel</button>
-        <button type="button" class="btn btn-primary" id="btnStartExport">
-          <span>Start Export</span>
-        </button>
+      <div class="modal-footer" id="exportModalFooter" style="display: flex; justify-content: space-between;">
+        <button type="button" class="btn btn-secondary" id="btnCancelExport">Batal</button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-emerald" id="btnQuickDownloadModal" title="Download instan tanpa menunggu">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>⚡ Download Langsung (1-Klik)</span>
+          </button>
+          <button type="button" class="btn btn-primary" id="btnStartExport">
+            <span>Mulai Render Lengkap</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -2669,6 +2708,6 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Studio JavaScript Engine -->
-  <script src="app.js?v=2.3.0"></script>
+  <script src="app.js?v=2.4.0"></script>
 </body>
 </html>
