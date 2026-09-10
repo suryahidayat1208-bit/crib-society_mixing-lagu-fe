@@ -485,8 +485,8 @@
         id: 'clip-1',
         trackId: 1,
         title: 'Cyberpunk_Vocals_Stems.mp3',
-        startSec: 4.0,
-        durationSec: 58.0,
+        startSec: 0.0,
+        durationSec: 225.0,
         fadeInSec: 0.5,
         fadeOutSec: 1.2,
         color: 'cyan',
@@ -500,7 +500,7 @@
         trackId: 2,
         title: 'Neon_Bass_Arp_128bpm.wav',
         startSec: 0.0,
-        durationSec: 73.0,
+        durationSec: 225.0,
         fadeInSec: 0.0,
         fadeOutSec: 2.0,
         color: 'purple',
@@ -514,7 +514,7 @@
         trackId: 3,
         title: 'Cyber_Drum_Stems.wav',
         startSec: 0.0,
-        durationSec: 78.5,
+        durationSec: 225.0,
         fadeInSec: 0.0,
         fadeOutSec: 1.0,
         color: 'emerald',
@@ -595,6 +595,8 @@
     btnZoomFit: document.getElementById('btnZoomFit'),
     zoomLevelText: document.getElementById('zoomLevelText'),
     snapSelect: document.getElementById('snapSelect'),
+    btnStudioImportAudio: document.getElementById('btnStudioImportAudio'),
+    studioDirectFileInput: document.getElementById('studioDirectFileInput'),
 
     // Phase 5 Mixer Console & Channel Strip Elements
     btnToggleMixerDock: document.getElementById('btnToggleMixerDock'),
@@ -1828,7 +1830,28 @@
     });
   }
 
-  function addSongToTimeline(songId) {
+  function ensureTimelineDurationForClips() {
+    let maxClipEnd = 0;
+    state.clips.forEach((c) => {
+      const dur = (c.durationSec && !isNaN(c.durationSec)) ? c.durationSec : 60.0;
+      maxClipEnd = Math.max(maxClipEnd, (c.startSec || 0) + dur);
+    });
+
+    if (maxClipEnd + 10 > state.totalDuration) {
+      state.totalDuration = Math.max(240.0, Math.ceil((maxClipEnd + 15) / 15) * 15);
+      state.pxPerSecond = state.timelineWidthPx / state.totalDuration;
+      if (elements.quickDuration) {
+        elements.quickDuration.textContent = formatTime(state.totalDuration);
+      }
+      if (elements.timecodeTotal) {
+        elements.timecodeTotal.textContent = formatTime(state.totalDuration);
+      }
+      buildTimelineRuler();
+      updatePlayheadPosition();
+    }
+  }
+
+  function addSongToTimeline(songId, targetTrackId = 4, targetStartSec = 0.0) {
     const library = getStoredLibrary();
     const song = library.find((s) => s.id === songId);
     if (!song) return;
@@ -1837,21 +1860,21 @@
     const audioEl = AUDIO_ELEMENTS[songId] || song.audioElement;
     const clipDur = (audioBuf && audioBuf.duration) ? audioBuf.duration :
                     (audioEl && audioEl.duration && !isNaN(audioEl.duration)) ? audioEl.duration :
-                    (song.durationSec || 60.0);
+                    (song.durationSec || 180.0);
 
     const newClip = {
       id: 'clip-' + Date.now(),
-      trackId: 4,
+      trackId: targetTrackId,
       title: song.title,
-      startSec: 0.0,
+      startSec: targetStartSec,
       durationSec: clipDur,
       fadeInSec: 0.5,
       fadeOutSec: 1.0,
-      color: 'amber',
+      color: targetTrackId === 1 ? 'cyan' : targetTrackId === 2 ? 'purple' : targetTrackId === 3 ? 'emerald' : 'amber',
       bpm: song.bpm || 128,
       key: song.key || 'A min',
       energy: song.energy || '80% (High)',
-      waveformSeed: 4,
+      waveformSeed: targetTrackId,
       audioBuffer: audioBuf,
       audioElement: audioEl
     };
@@ -1860,6 +1883,20 @@
     }
     if (audioEl) {
       AUDIO_ELEMENTS[newClip.id] = audioEl;
+
+      const onDurationLoaded = () => {
+        if (audioEl.duration && !isNaN(audioEl.duration) && audioEl.duration > 0) {
+          newClip.durationSec = audioEl.duration;
+          ensureTimelineDurationForClips();
+          renderClips();
+          if (elements.quickDuration) {
+            elements.quickDuration.textContent = formatTime(state.totalDuration);
+          }
+        }
+      };
+      audioEl.addEventListener('loadedmetadata', onDurationLoaded, { once: true });
+      audioEl.addEventListener('durationchange', onDurationLoaded);
+      audioEl.addEventListener('canplaythrough', onDurationLoaded, { once: true });
     }
 
     ANALYSIS_PROFILES[newClip.id] = {
@@ -1881,12 +1918,134 @@
     };
 
     state.clips.push(newClip);
+    ensureTimelineDurationForClips();
     renderClips();
     selectClip(newClip.id);
-    seekTo(0);
+    seekTo(targetStartSec);
 
     switchView('studio');
-    showToast(state.language === 'id' ? `"${song.title}" masuk ke Track 4 • Tekan Spasi untuk Putar 🔊` : `"${song.title}" added to Track 4 • Press Space to Play 🔊`);
+    showToast(state.language === 'id' ? `"${song.title}" masuk ke Track ${targetTrackId} • Durasi penuh siap diputar 🔊` : `"${song.title}" added to Track ${targetTrackId} • Full track ready to play 🔊`);
+    triggerAutosave();
+  }
+
+  function importAudioFileDirectly(file, targetTrackId = 1, targetStartSec = 0.0) {
+    if (!file) return;
+
+    const validExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'];
+    const fileName = file.name || 'Imported_Track.mp3';
+    const isAudio = validExtensions.some((ext) => fileName.toLowerCase().endsWith(ext)) || (file.type && file.type.startsWith('audio/'));
+
+    if (!isAudio) {
+      showToast(state.language === 'id' ? 'Format audio tidak didukung. Gunakan MP3, WAV, atau FLAC.' : 'Unsupported audio format. Please upload MP3, WAV, or FLAC.');
+      return;
+    }
+
+    let audioUrl = null;
+    let audioEl = null;
+    try {
+      audioUrl = URL.createObjectURL(file);
+      audioEl = new Audio(audioUrl);
+      audioEl.preload = 'auto';
+    } catch (e) {
+      console.warn('Could not create Audio element for file', e);
+    }
+
+    let initialDur = 180.0;
+    if (file.size > 0) {
+      initialDur = Math.max(30, Math.min(600, Math.round(file.size / 24000)));
+    }
+
+    const clipId = 'clip-' + Date.now();
+    const colorMap = { 1: 'cyan', 2: 'purple', 3: 'emerald', 4: 'amber' };
+    const trackColor = colorMap[targetTrackId] || 'cyan';
+
+    const newClip = {
+      id: clipId,
+      trackId: targetTrackId,
+      title: fileName,
+      startSec: targetStartSec,
+      durationSec: initialDur,
+      fadeInSec: 0.2,
+      fadeOutSec: 0.8,
+      color: trackColor,
+      bpm: 128,
+      key: 'A min',
+      energy: '80% (High)',
+      waveformSeed: targetTrackId,
+      audioElement: audioEl,
+      audioBuffer: null
+    };
+
+    if (audioEl) {
+      AUDIO_ELEMENTS[clipId] = audioEl;
+
+      const onDurationAvailable = () => {
+        if (audioEl.duration && !isNaN(audioEl.duration) && audioEl.duration > 0) {
+          newClip.durationSec = audioEl.duration;
+          ensureTimelineDurationForClips();
+          renderClips();
+          if (elements.quickDuration) {
+            elements.quickDuration.textContent = formatTime(state.totalDuration);
+          }
+        }
+      };
+
+      audioEl.addEventListener('loadedmetadata', onDurationAvailable, { once: true });
+      audioEl.addEventListener('durationchange', onDurationAvailable);
+      audioEl.addEventListener('canplaythrough', onDurationAvailable, { once: true });
+    }
+
+    const ctx = getAudioContext();
+    if (ctx && file.arrayBuffer) {
+      file.arrayBuffer().then((ab) => {
+        ctx.decodeAudioData(ab.slice(0)).then((decoded) => {
+          AUDIO_BUFFERS[clipId] = decoded;
+          newClip.audioBuffer = decoded;
+          newClip.durationSec = decoded.duration;
+          ensureTimelineDurationForClips();
+          renderClips();
+          if (elements.quickDuration) {
+            elements.quickDuration.textContent = formatTime(state.totalDuration);
+          }
+        }).catch((err) => {
+          console.warn('Audio decoding fallback to AudioElement:', err);
+        });
+      }).catch((e) => console.warn('ArrayBuffer read error:', e));
+    }
+
+    // Cleanly replace old clips on target track if starting at 0:00
+    if (targetStartSec === 0.0) {
+      state.clips = state.clips.filter((c) => c.trackId !== targetTrackId);
+    }
+
+    ANALYSIS_PROFILES[clipId] = {
+      title: fileName,
+      bpm: 128,
+      bpmConf: 96.0,
+      key: 'A min',
+      camelot: getCamelotCode('A min'),
+      keyConf: 92.0,
+      energy: 82,
+      energyDesc: '82% Energy',
+      lufsIntegrated: -13.0,
+      truePeak: -0.5,
+      lra: 6.0,
+      lufsMax: -10.2,
+      syncReady: true,
+      svgArea: 'M0,45 Q35,38 70,30 T140,8 T210,18 T280,38 L280,54 L0,54 Z',
+      svgLine: 'M0,45 Q35,38 70,30 T140,8 T210,18 T280,38'
+    };
+
+    state.clips.push(newClip);
+    ensureTimelineDurationForClips();
+    renderClips();
+    selectClip(clipId);
+    seekTo(targetStartSec);
+
+    switchView('studio');
+    showToast(state.language === 'id' ?
+      `"${fileName}" dimasukkan ke Track ${targetTrackId} • Durasi penuh siap diputar 🔊` :
+      `"${fileName}" loaded to Track ${targetTrackId} • Full track ready to play 🔊`);
     triggerAutosave();
   }
 
@@ -1907,12 +2066,30 @@
     const isAudio = validExtensions.some((ext) => fileName.toLowerCase().endsWith(ext)) || (file.type && file.type.startsWith('audio/'));
 
     if (!isAudio) {
-      showToast('Unsupported audio format. Please upload MP3, WAV, or FLAC.');
+      showToast(state.language === 'id' ? 'Format audio tidak didukung. Harap unggah MP3, WAV, atau FLAC.' : 'Unsupported audio format. Please upload MP3, WAV, or FLAC.');
       return;
     }
 
     state.pendingUploadFile = file;
     state.pendingDecodedBuffer = null;
+
+    function applyResolvedDuration(dur) {
+      if (!dur || isNaN(dur) || dur <= 0) return;
+      if (state.pendingUploadItem) {
+        state.pendingUploadItem.durationSec = dur;
+        state.pendingUploadItem.duration = formatTime(dur);
+      }
+      if (elements.previewDuration) {
+        elements.previewDuration.textContent = formatTime(dur);
+      }
+      state.clips.forEach((c) => {
+        if (c.audioElement === audioEl || (state.pendingUploadItem && c.id === state.pendingUploadItem.id)) {
+          c.durationSec = dur;
+          ensureTimelineDurationForClips();
+          renderClips();
+        }
+      });
+    }
 
     // Create immediate native Audio element for guaranteed instant playback
     let audioUrl = null;
@@ -1923,6 +2100,10 @@
       audioEl.preload = 'auto';
       state.pendingAudioUrl = audioUrl;
       state.pendingAudioElement = audioEl;
+
+      audioEl.addEventListener('loadedmetadata', () => applyResolvedDuration(audioEl.duration));
+      audioEl.addEventListener('durationchange', () => applyResolvedDuration(audioEl.duration));
+      audioEl.addEventListener('canplaythrough', () => applyResolvedDuration(audioEl.duration));
     } catch (e) {
       console.warn('Could not create ObjectURL for file', e);
     }
@@ -1933,14 +2114,10 @@
       file.arrayBuffer().then((ab) => {
         ctx.decodeAudioData(ab.slice(0)).then((decoded) => {
           state.pendingDecodedBuffer = decoded;
+          applyResolvedDuration(decoded.duration);
           if (state.pendingUploadItem) {
             state.pendingUploadItem.audioBuffer = decoded;
-            state.pendingUploadItem.durationSec = decoded.duration;
-            state.pendingUploadItem.duration = formatTime(decoded.duration);
             AUDIO_BUFFERS[state.pendingUploadItem.id] = decoded;
-            if (elements.previewDuration) {
-              elements.previewDuration.textContent = formatTime(decoded.duration);
-            }
           }
         }).catch((err) => {
           console.warn('Audio decoding fallback to AudioElement:', err);
@@ -2000,9 +2177,15 @@
     const energyVal = 70 + Math.floor((fileName.length * 3) % 26);
     const energyLabel = energyVal > 80 ? `${energyVal}% (High)` : `${energyVal}% (Med)`;
 
-    const defaultDurationSec = (state.pendingDecodedBuffer && state.pendingDecodedBuffer.duration) ? state.pendingDecodedBuffer.duration :
-                              (state.pendingAudioElement && state.pendingAudioElement.duration && !isNaN(state.pendingAudioElement.duration)) ? state.pendingAudioElement.duration : 155.0;
-    const defaultDurationStr = formatTime(defaultDurationSec);
+    let accurateDurationSec = 180.0;
+    if (state.pendingDecodedBuffer && state.pendingDecodedBuffer.duration > 0) {
+      accurateDurationSec = state.pendingDecodedBuffer.duration;
+    } else if (state.pendingAudioElement && !isNaN(state.pendingAudioElement.duration) && state.pendingAudioElement.duration > 0) {
+      accurateDurationSec = state.pendingAudioElement.duration;
+    } else if (fileSize > 0) {
+      accurateDurationSec = Math.max(30, Math.min(600, Math.round(fileSize / 24000)));
+    }
+    const accurateDurationStr = formatTime(accurateDurationSec);
 
     state.pendingUploadItem = {
       id: 'lib-' + Date.now(),
@@ -2010,8 +2193,8 @@
       category: category,
       categoryLabel: capitalize(category),
       model: 'Suno v3.5',
-      duration: defaultDurationStr,
-      durationSec: defaultDurationSec,
+      duration: accurateDurationStr,
+      durationSec: accurateDurationSec,
       bpm: detectedBpm,
       key: detectedKey,
       energy: energyLabel,
@@ -2032,7 +2215,7 @@
     if (elements.previewSongTitle) elements.previewSongTitle.textContent = cleanTitle;
     if (elements.previewBpm) elements.previewBpm.textContent = detectedBpm;
     if (elements.previewKey) elements.previewKey.textContent = detectedKey;
-    if (elements.previewDuration) elements.previewDuration.textContent = defaultDurationStr;
+    if (elements.previewDuration) elements.previewDuration.textContent = accurateDurationStr;
     if (elements.previewEnergy) elements.previewEnergy.textContent = energyLabel;
 
     if (elements.uploadMetaPreview) elements.uploadMetaPreview.style.display = 'flex';
@@ -2735,7 +2918,29 @@
 
     state.currentTime += delta;
 
-    if (state.currentTime >= state.totalDuration) {
+    let maxEndTime = state.totalDuration;
+    if (state.clips && state.clips.length > 0) {
+      let maxClipEnd = 0;
+      state.clips.forEach((c) => {
+        const dur = (c.durationSec && !isNaN(c.durationSec)) ? c.durationSec : 60.0;
+        maxClipEnd = Math.max(maxClipEnd, (c.startSec || 0) + dur);
+      });
+      maxEndTime = Math.max(state.totalDuration, maxClipEnd);
+    }
+
+    // Cleanly stop active HTML5 audio elements that have reached their clipEnd
+    state.clips.forEach((clip) => {
+      const el = activeAudioElements[clip.id];
+      if (el) {
+        const clipEnd = (clip.startSec || 0) + ((clip.durationSec && !isNaN(clip.durationSec)) ? clip.durationSec : 60.0);
+        if (state.currentTime >= clipEnd) {
+          try { el.pause(); } catch (e) {}
+          delete activeAudioElements[clip.id];
+        }
+      }
+    });
+
+    if (state.currentTime >= maxEndTime) {
       if (state.isLooping) {
         state.currentTime = 0;
         if (state.isPlaying) {
@@ -2744,7 +2949,7 @@
         }
       } else {
         pausePlayback();
-        state.currentTime = state.totalDuration;
+        state.currentTime = maxEndTime;
       }
     }
 
@@ -3558,6 +3763,61 @@
               r.classList.toggle('selected', r.dataset.trackId === `track-${trackId}`);
             });
           }
+        }
+      });
+
+      // Direct drag and drop of audio files onto tracks
+      ['dragenter', 'dragover'].forEach((eventName) => {
+        elements.tracksContainer.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const lane = e.target.closest('.track-lane');
+          document.querySelectorAll('.track-lane').forEach((l) => l.classList.remove('track-drop-hover'));
+          if (lane) lane.classList.add('track-drop-hover');
+        });
+      });
+
+      ['dragleave'].forEach((eventName) => {
+        elements.tracksContainer.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const lane = e.target.closest('.track-lane');
+          if (lane) lane.classList.remove('track-drop-hover');
+        });
+      });
+
+      elements.tracksContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        document.querySelectorAll('.track-lane').forEach((l) => l.classList.remove('track-drop-hover'));
+
+        const files = e.dataTransfer ? e.dataTransfer.files : null;
+        if (!files || files.length === 0) return;
+
+        const lane = e.target.closest('.track-lane');
+        const targetTrackId = (lane && lane.dataset.track) ? parseInt(lane.dataset.track, 10) : 1;
+        let dropSec = 0.0;
+        if (lane) {
+          const laneRect = lane.getBoundingClientRect();
+          const clickOffsetPx = e.clientX - laneRect.left;
+          dropSec = Math.max(0, snapTime(clickOffsetPx / state.pxPerSecond));
+        }
+
+        importAudioFileDirectly(files[0], targetTrackId, dropSec);
+      });
+    }
+
+    // Direct toolbar import button
+    if (elements.btnStudioImportAudio && elements.studioDirectFileInput) {
+      elements.btnStudioImportAudio.addEventListener('click', () => {
+        elements.studioDirectFileInput.click();
+      });
+
+      elements.studioDirectFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          const activeTrkNum = parseInt((state.selectedTrackId || 'track-1').replace('track-', ''), 10) || 1;
+          importAudioFileDirectly(e.target.files[0], activeTrkNum, 0.0);
+          e.target.value = '';
         }
       });
     }
@@ -6049,6 +6309,7 @@
       'toolbar.zoom': 'Zoom Tool (Z)',
       'toolbar.mixer': 'Mixer',
       'toolbar.auto_mix': 'Auto Mix',
+      'toolbar.import_audio': 'Import Audio',
       'mixer.console_title': 'MULTI-CHANNEL MIXER CONSOLE',
       'mixer.quick_preset_placeholder': 'Preset: Select...',
       'inspector.tab_clip': 'Clip',
@@ -6089,6 +6350,7 @@
       'toolbar.zoom': 'Alat Zoom (Z)',
       'toolbar.mixer': 'Konsol Mixer',
       'toolbar.auto_mix': 'Campur Otomatis',
+      'toolbar.import_audio': 'Import Lagu',
       'mixer.console_title': 'KONSOL MIXER MULTI-SALURAN',
       'mixer.quick_preset_placeholder': 'Pilih Preset...',
       'inspector.tab_clip': 'Klip',

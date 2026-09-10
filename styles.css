@@ -932,6 +932,13 @@ html, body {
   padding: 6px 0;
   display: flex;
   align-items: center;
+  transition: background 0.15s ease, outline 0.15s ease;
+}
+
+.track-lane.track-drop-hover {
+  background: rgba(139, 92, 246, 0.15) !important;
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
 }
 
 /* Waveform Audio Clip Placeholder */
