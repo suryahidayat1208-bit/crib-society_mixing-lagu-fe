@@ -2504,14 +2504,16 @@
       } catch (e) {}
     }
 
-    // Also update any active HTML5 audio elements on this track
+    // Also update any active HTML5 audio elements on this track if not routed through Web Audio
     state.clips.forEach((clip) => {
       if (clip.trackId === trackId && activeAudioElements[clip.id]) {
         const el = activeAudioElements[clip.id];
-        const masterVol = (state.mixer && state.mixer.master) ? state.mixer.master.vol : 0;
-        const masterGain = Math.pow(10, masterVol / 20);
-        el.volume = Math.max(0, Math.min(1, effectiveGain * masterGain));
-        el.muted = trk.mute;
+        if (!activeElementSources[clip.id]) {
+          const masterVol = (state.mixer && state.mixer.master) ? state.mixer.master.vol : 0;
+          const masterGain = Math.pow(10, masterVol / 20);
+          el.volume = Math.max(0, Math.min(1, effectiveGain * masterGain));
+          el.muted = trk.mute;
+        }
       }
     });
   }
@@ -2526,14 +2528,16 @@
       masterGainNode.gain.value = g;
     }
 
-    // Also update all active HTML5 audio elements
+    // Also update all active HTML5 audio elements if not routed through Web Audio
     state.clips.forEach((clip) => {
       if (activeAudioElements[clip.id]) {
         const el = activeAudioElements[clip.id];
-        const trk = state.tracks[clip.trackId] || { vol: 0, gainTrim: 0, mute: false };
-        const effectiveGain = !trk.mute ? Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20) : 0;
-        el.volume = Math.max(0, Math.min(1, effectiveGain * g));
-        el.muted = trk.mute;
+        if (!activeElementSources[clip.id]) {
+          const trk = state.tracks[clip.trackId] || { vol: 0, gainTrim: 0, mute: false };
+          const effectiveGain = !trk.mute ? Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20) : 0;
+          el.volume = Math.max(0, Math.min(1, effectiveGain * g));
+          el.muted = trk.mute;
+        }
       }
     });
   }
@@ -2724,23 +2728,87 @@
       const clipEnd = clip.startSec + clip.durationSec;
       if (currentStudioTime >= clipEnd) return;
 
-      // 1. Check for native HTML5 Audio Element playback (e.g. uploaded MP3/WAV tracks)
+      // 1. Primary: Web Audio Buffer Source Node (Procedural tracks and decoded buffers)
+      // Routes directly through the full Web Audio DSP chain:
+      // clarityLowCut -> clarityDeMud -> clarityHighAir -> voiceFilter -> eqLow -> eqMid -> eqHigh -> trackGain -> panNode -> masterGainNode -> Limiter -> destination
+      const buf = getClipAudioBuffer(clip);
+      if (buf) {
+        let when = now;
+        let offset = 0;
+
+        if (currentStudioTime < clip.startSec) {
+          when = now + (clip.startSec - currentStudioTime);
+          offset = 0;
+        } else {
+          when = now;
+          offset = currentStudioTime - clip.startSec;
+        }
+
+        const bufOffset = offset % buf.duration;
+
+        try {
+          const source = ctx.createBufferSource();
+          source.buffer = buf;
+          if (buf.duration < clip.durationSec) {
+            source.loop = true;
+          }
+
+          // Apply pitch rate from voice transformer
+          const fx = (state.trackEffects && state.trackEffects[clip.trackId]) || {};
+          let rate = 1.0;
+          if (fx.voice === 'chipmunk') rate = 1.35;
+          else if (fx.voice === 'monster') rate = 0.80;
+          try { source.playbackRate.setValueAtTime(rate, when); } catch (e) {}
+
+          const clipGain = ctx.createGain();
+          clipGain.gain.setValueAtTime(1.0, when);
+
+          const trackNode = trackNodes[clip.trackId];
+          if (trackNode) {
+            source.connect(clipGain);
+            clipGain.connect(trackNode.clarityLowCut);
+          } else {
+            source.connect(clipGain);
+            clipGain.connect(masterGainNode);
+          }
+
+          // Start safely with 2 arguments
+          source.start(when, bufOffset);
+
+          // Stop cleanly at clipEnd
+          const stopTime = when + (clipEnd - Math.max(currentStudioTime, clip.startSec));
+          try {
+            source.stop(stopTime);
+          } catch (e) {}
+
+          activeAudioSources[clip.id] = { source, clipGain };
+        } catch (err) {
+          console.warn('Error starting audio source for clip:', clip.id, err);
+        }
+        return;
+      }
+
+      // 2. Fallback: Native HTML5 Audio Element routed through Web Audio DSP!
       const el = clip.audioElement || AUDIO_ELEMENTS[clip.id];
       if (el) {
-        const trk = state.tracks[clip.trackId] || { vol: 0, gainTrim: 0, mute: false, pan: 0 };
-        const anySolo = Object.values(state.tracks).some((t) => t.solo);
-        let effectiveGain = 1.0;
-        if (anySolo) {
-          effectiveGain = (trk.solo && !trk.mute) ? Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20) : 0;
-        } else {
-          effectiveGain = !trk.mute ? Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20) : 0;
+        const trackNode = trackNodes[clip.trackId];
+        if (!activeElementSources[clip.id]) {
+          try {
+            const elSrc = ctx.createMediaElementSource(el);
+            if (trackNode) {
+              elSrc.connect(trackNode.clarityLowCut);
+            } else {
+              elSrc.connect(masterGainNode);
+            }
+            activeElementSources[clip.id] = elSrc;
+          } catch (e) {
+            console.warn('createMediaElementSource route note:', e);
+          }
         }
-        const masterVol = (state.mixer && state.mixer.master) ? state.mixer.master.vol : 0;
-        const masterGain = Math.pow(10, masterVol / 20);
-        const finalVol = Math.max(0, Math.min(1, effectiveGain * masterGain));
 
-        el.volume = finalVol;
-        el.muted = trk.mute;
+        // Keep el unattenuated so Web Audio trackNode.gain and masterGainNode control the audio
+        el.volume = 1.0;
+        el.muted = false;
 
         // Apply pitch rate from voice transformer if set
         const fx = (state.trackEffects && state.trackEffects[clip.trackId]) || {};
@@ -2768,63 +2836,6 @@
           activeAudioTimeouts[clip.id] = tid;
         }
         return;
-      }
-
-      // 2. Web Audio Buffer Source Node (Procedural tracks and decoded buffers)
-      const buf = getClipAudioBuffer(clip);
-      if (!buf) return;
-
-      let when = now;
-      let offset = 0;
-
-      if (currentStudioTime < clip.startSec) {
-        when = now + (clip.startSec - currentStudioTime);
-        offset = 0;
-      } else {
-        when = now;
-        offset = currentStudioTime - clip.startSec;
-      }
-
-      const bufOffset = offset % buf.duration;
-
-      try {
-        const source = ctx.createBufferSource();
-        source.buffer = buf;
-        if (buf.duration < clip.durationSec) {
-          source.loop = true;
-        }
-
-        // Apply pitch rate from voice transformer
-        const fx = (state.trackEffects && state.trackEffects[clip.trackId]) || {};
-        let rate = 1.0;
-        if (fx.voice === 'chipmunk') rate = 1.35;
-        else if (fx.voice === 'monster') rate = 0.80;
-        try { source.playbackRate.setValueAtTime(rate, when); } catch (e) {}
-
-        const clipGain = ctx.createGain();
-        clipGain.gain.setValueAtTime(1.0, when);
-
-        const trackNode = trackNodes[clip.trackId];
-        if (trackNode) {
-          source.connect(clipGain);
-          clipGain.connect(trackNode.clarityLowCut);
-        } else {
-          source.connect(clipGain);
-          clipGain.connect(masterGainNode);
-        }
-
-        // Start safely with 2 arguments
-        source.start(when, bufOffset);
-
-        // Stop cleanly at clipEnd
-        const stopTime = when + (clipEnd - Math.max(currentStudioTime, clip.startSec));
-        try {
-          source.stop(stopTime);
-        } catch (e) {}
-
-        activeAudioSources[clip.id] = { source, clipGain };
-      } catch (err) {
-        console.warn('Error starting audio source for clip:', clip.id, err);
       }
     });
   }
@@ -3614,25 +3625,22 @@
     if (!clip) return;
 
     state.selectedClipId = clip.id;
-    state.selectedTrackId = `track-${clip.trackId}`;
 
     document.querySelectorAll('.audio-clip').forEach((el) => {
       el.classList.toggle('selected', el.id === clip.id);
     });
 
-    document.querySelectorAll('.track-row').forEach((row) => {
-      row.classList.toggle('selected', row.dataset.trackId === `track-${clip.trackId}`);
-    });
+    // Unified studio track selection (syncs timeline, mixer console, modals & inspector)
+    if (typeof selectStudioTrack === 'function') {
+      selectStudioTrack(clip.trackId, { syncClip: false });
+    } else if (typeof selectMixerTrack === 'function') {
+      selectMixerTrack(clip.trackId);
+    }
 
     updateInspectorClipValues(clip);
 
     const profile = getAnalysisProfileForClip(clip);
     updateAnalysisUI(profile);
-
-    // Sync mixer channel selection
-    if (typeof selectMixerTrack === 'function') {
-      selectMixerTrack(clip.trackId);
-    }
 
     // Sync AI Inspector values
     if (typeof updateAiInspectorUI === 'function') {
@@ -3833,10 +3841,7 @@
 
           const trackId = lane.dataset.track;
           if (trackId) {
-            state.selectedTrackId = `track-${trackId}`;
-            document.querySelectorAll('.track-row').forEach((r) => {
-              r.classList.toggle('selected', r.dataset.trackId === `track-${trackId}`);
-            });
+            selectStudioTrack(parseInt(trackId, 10));
           }
         }
       });
@@ -4116,25 +4121,68 @@
     triggerAutosave();
   }
 
-  function selectMixerTrack(trackId) {
-    const id = Number(trackId);
-    if (!state.tracks[id]) return;
-    state.mixer.selectedTrackId = id;
-    state.selectedTrackId = `track-${id}`;
+  function selectStudioTrack(trackId, options = {}) {
+    let id = typeof trackId === 'string' ? parseInt(trackId.replace('track-', ''), 10) : Number(trackId);
+    if (isNaN(id) || !state.tracks[id]) id = 1;
 
-    // Highlight in Timeline
+    state.selectedTrackId = `track-${id}`;
+    state.mixer.selectedTrackId = id;
+
+    // 1. Highlight Timeline Track Rows
     document.querySelectorAll('.track-row').forEach((row) => {
       row.classList.toggle('selected', row.dataset.trackId === `track-${id}`);
     });
 
-    // Highlight in Mixer Console
+    // 2. Highlight Mixer Console Strips
     document.querySelectorAll('.mixer-strip').forEach((strip) => {
       strip.classList.toggle('selected', strip.dataset.track === String(id));
     });
 
-    // Update Inspector
-    if (elements.mixerTrackSelector) elements.mixerTrackSelector.value = String(id);
+    // 3. Sync Modal Selectors and UI
+    if (elements.clarityTrackSelect && elements.clarityTrackSelect.value !== String(id)) {
+      elements.clarityTrackSelect.value = String(id);
+    }
+    if (typeof updateClarityModalUI === 'function') {
+      updateClarityModalUI(id);
+    }
+
+    if (elements.voiceTrackSelect && elements.voiceTrackSelect.value !== String(id)) {
+      elements.voiceTrackSelect.value = String(id);
+    }
+    if (typeof updateVoiceModalUI === 'function') {
+      updateVoiceModalUI(id);
+    }
+
+    // 4. Sync Inspector Channel & Controls
+    if (elements.mixerTrackSelector && elements.mixerTrackSelector.value !== String(id)) {
+      elements.mixerTrackSelector.value = String(id);
+    }
     updateMixerUI(id);
+
+    // 5. If options.syncClip is not false, select the track's clip to populate Clip Inspector & Waveform Analysis
+    if (options.syncClip !== false) {
+      const trackClips = state.clips.filter((c) => c.trackId === id);
+      if (trackClips.length > 0) {
+        const curSelectedClip = getClipById(state.selectedClipId);
+        if (!curSelectedClip || curSelectedClip.trackId !== id) {
+          const targetClip = trackClips[0];
+          state.selectedClipId = targetClip.id;
+          document.querySelectorAll('.audio-clip').forEach((el) => {
+            el.classList.toggle('selected', el.id === targetClip.id);
+          });
+          updateInspectorClipValues(targetClip);
+          const profile = getAnalysisProfileForClip(targetClip);
+          updateAnalysisUI(profile);
+          if (typeof updateAiInspectorUI === 'function') {
+            updateAiInspectorUI(targetClip);
+          }
+        }
+      }
+    }
+  }
+
+  function selectMixerTrack(trackId) {
+    selectStudioTrack(trackId);
   }
 
   function renderEqCurve(trackId) {
@@ -4671,11 +4719,12 @@
     }
 
     document.querySelectorAll('.track-row').forEach((row) => {
-      row.addEventListener('click', () => {
+      row.addEventListener('click', (e) => {
+        if (['INPUT', 'BUTTON', 'SELECT'].includes(e.target.tagName)) return;
         const trackId = row.dataset.trackId;
         if (trackId) {
           const numId = parseInt(trackId.replace('track-', ''), 10);
-          selectMixerTrack(numId);
+          selectStudioTrack(numId);
         }
       });
     });
@@ -7013,19 +7062,49 @@
   // --------------------------------------------------------------------------
   // 21b. Audio Clarity & Voice Transformer Modules
   // --------------------------------------------------------------------------
+  let currentSelectedClarityPreset = 'clean_total';
+  let currentSelectedVoicePreset = 'original';
+
+  function updateClarityModalUI(trackId) {
+    const id = typeof trackId === 'string' ? parseInt(trackId.replace('track-', ''), 10) : Number(trackId);
+    const fx = (state.trackEffects && state.trackEffects[id]) || {};
+    currentSelectedClarityPreset = fx.clarity || 'clean_total';
+    const intensity = fx.clarityIntensity || 80;
+    if (elements.clarityIntensitySlider) elements.clarityIntensitySlider.value = intensity;
+    if (elements.clarityIntensityVal) elements.clarityIntensityVal.textContent = intensity + '%';
+
+    if (elements.clarityPresetsGrid) {
+      elements.clarityPresetsGrid.querySelectorAll('.fx-preset-card').forEach((card) => {
+        card.classList.toggle('active', card.dataset.preset === currentSelectedClarityPreset);
+      });
+    }
+  }
+
+  function updateVoiceModalUI(trackId) {
+    const id = typeof trackId === 'string' ? parseInt(trackId.replace('track-', ''), 10) : Number(trackId);
+    const fx = (state.trackEffects && state.trackEffects[id]) || {};
+    currentSelectedVoicePreset = fx.voice || 'original';
+    if (elements.voicePresetsGrid) {
+      elements.voicePresetsGrid.querySelectorAll('.fx-preset-card').forEach((card) => {
+        card.classList.toggle('active', card.dataset.preset === currentSelectedVoicePreset);
+      });
+    }
+  }
+
   function applyTrackClarity(trackId, presetKey, intensity) {
+    const id = typeof trackId === 'string' ? parseInt(trackId.replace('track-', ''), 10) : Number(trackId);
     if (!state.trackEffects) state.trackEffects = {};
-    if (!state.trackEffects[trackId]) {
-      state.trackEffects[trackId] = { clarity: null, voice: null, clarityIntensity: 80 };
+    if (!state.trackEffects[id]) {
+      state.trackEffects[id] = { clarity: null, voice: null, clarityIntensity: 80 };
     }
 
-    state.trackEffects[trackId].clarity = presetKey;
-    state.trackEffects[trackId].clarityIntensity = intensity || 80;
+    state.trackEffects[id].clarity = presetKey;
+    state.trackEffects[id].clarityIntensity = intensity || 80;
 
     ensureTrackAudioNodes();
-    const node = trackNodes[trackId];
+    const node = trackNodes[id];
     if (node && audioCtx) {
-      const factor = (state.trackEffects[trackId].clarityIntensity) / 100;
+      const factor = (state.trackEffects[id].clarityIntensity) / 100;
       const now = audioCtx.currentTime;
 
       if (presetKey === 'clean_total') {
@@ -7060,24 +7139,32 @@
       }
     }
 
+    // Sync quick clarity button in mixer console
+    const quickBtn = document.getElementById(`stripQuickClarity-${id}`);
+    if (quickBtn) {
+      quickBtn.classList.toggle('active', !!presetKey);
+      quickBtn.textContent = presetKey ? '🧹 Jernih Aktif' : '🧹 Jernihkan';
+    }
+
     updateTrackEffectBadges();
-    pushHistorySnapshot(`Clarity FX: Track ${trackId} (${presetKey || 'Normal'})`);
+    pushHistorySnapshot(`Clarity FX: Track ${id} (${presetKey || 'Normal'})`);
   }
 
   function applyTrackVoice(trackId, presetKey) {
+    const id = typeof trackId === 'string' ? parseInt(trackId.replace('track-', ''), 10) : Number(trackId);
     if (!state.trackEffects) state.trackEffects = {};
-    if (!state.trackEffects[trackId]) {
-      state.trackEffects[trackId] = { clarity: null, voice: null, clarityIntensity: 80 };
+    if (!state.trackEffects[id]) {
+      state.trackEffects[id] = { clarity: null, voice: null, clarityIntensity: 80 };
     }
 
-    state.trackEffects[trackId].voice = (presetKey === 'original' || !presetKey) ? null : presetKey;
+    state.trackEffects[id].voice = (presetKey === 'original' || !presetKey) ? null : presetKey;
 
     let rate = 1.0;
     if (presetKey === 'chipmunk') rate = 1.35;
     else if (presetKey === 'monster') rate = 0.80;
 
     // Real-time update for currently active audio playback
-    const trkClips = state.clips.filter((c) => c.trackId === trackId);
+    const trkClips = state.clips.filter((c) => c.trackId === id);
     trkClips.forEach((c) => {
       const el = activeAudioElements[c.id];
       if (el) {
@@ -7090,7 +7177,7 @@
     });
 
     ensureTrackAudioNodes();
-    const node = trackNodes[trackId];
+    const node = trackNodes[id];
     if (node && node.voiceFilter && audioCtx) {
       const now = audioCtx.currentTime;
       if (presetKey === 'telephone') {
@@ -7120,27 +7207,33 @@
       }
     }
 
+    // Sync voice selector dropdown in mixer console
+    const voiceSel = document.getElementById(`stripVoiceSelect-${id}`);
+    if (voiceSel) {
+      voiceSel.value = presetKey || 'original';
+    }
+
     updateTrackEffectBadges();
-    pushHistorySnapshot(`Voice FX: Track ${trackId} (${presetKey || 'Normal'})`);
+    pushHistorySnapshot(`Voice FX: Track ${id} (${presetKey || 'Normal'})`);
   }
 
   function updateTrackEffectBadges() {
     const isId = (state.language || 'id') === 'id';
     const clarityLabels = {
-      clean_total: isId ? '🧹 Bersih Total' : '🧹 Ultra Clean',
-      studio_mic: isId ? '🎙️ Studio Mic' : '🎙️ Studio Mic',
-      anti_hiss: isId ? '🔇 Anti-Hiss' : '🔇 Anti-Hiss',
-      warm_crisp: isId ? '✨ Warm Crisp' : '✨ Warm Crisp'
+      clean_total: isId ? '\u{1F9F9} Bersih Total' : '\u{1F9F9} Ultra Clean',
+      studio_mic: isId ? '\u{1F399}\uFE0F Studio Mic' : '\u{1F399}\uFE0F Studio Mic',
+      anti_hiss: isId ? '\u{1F507} Anti-Hiss' : '\u{1F507} Anti-Hiss',
+      warm_crisp: isId ? '\u2728 Warm Crisp' : '\u2728 Warm Crisp'
     };
 
     const voiceLabels = {
-      chipmunk: isId ? '🐿️ Chipmunk' : '🐿️ Chipmunk',
-      monster: isId ? '👹 Monster' : '👹 Monster',
-      telephone: isId ? '📞 Telepon' : '📞 Telephone',
-      robot: isId ? '🤖 Robot' : '🤖 Robot',
-      underwater: isId ? '🌊 Air' : '🌊 Underwater',
-      cathedral: isId ? '🏛️ Katedral' : '🏛️ Cathedral',
-      crystal: isId ? '💎 Crystal' : '💎 Crystal'
+      chipmunk: isId ? '\u{1F43F}\uFE0F Chipmunk' : '\u{1F43F}\uFE0F Chipmunk',
+      monster: isId ? '\u{1F479} Monster' : '\u{1F479} Monster',
+      telephone: isId ? '\u{1F4DE} Telepon' : '\u{1F4DE} Telephone',
+      robot: isId ? '\u{1F916} Robot' : '\u{1F916} Robot',
+      underwater: isId ? '\u{1F30A} Air' : '\u{1F30A} Underwater',
+      cathedral: isId ? '\u{1F3DB}\uFE0F Katedral' : '\u{1F3DB}\uFE0F Cathedral',
+      crystal: isId ? '\u{1F48E} Crystal' : '\u{1F48E} Crystal'
     };
 
     [1, 2, 3, 4].forEach((trackId) => {
@@ -7149,14 +7242,19 @@
       el.innerHTML = '';
 
       const fx = state.trackEffects && state.trackEffects[trackId];
-      if (!fx) return;
+      if (!fx) {
+        el.style.display = 'none';
+        return;
+      }
 
+      let hasBadges = false;
       if (fx.clarity && clarityLabels[fx.clarity]) {
         const pill = document.createElement('span');
         pill.className = 'track-badge-pill';
         pill.title = `Clarity: ${fx.clarity} (${fx.clarityIntensity || 80}%)`;
         pill.textContent = clarityLabels[fx.clarity];
         el.appendChild(pill);
+        hasBadges = true;
       }
 
       if (fx.voice && voiceLabels[fx.voice]) {
@@ -7165,7 +7263,10 @@
         pill.title = `Voice FX: ${fx.voice}`;
         pill.textContent = voiceLabels[fx.voice];
         el.appendChild(pill);
+        hasBadges = true;
       }
+
+      el.style.display = hasBadges ? 'inline-flex' : 'none';
     });
   }
 
@@ -7184,26 +7285,10 @@
     }
 
     // 2. Clarity Modal
-    let currentSelectedClarityPreset = 'clean_total';
-
-    function updateClarityModalUI(trackId) {
-      const fx = (state.trackEffects && state.trackEffects[trackId]) || {};
-      currentSelectedClarityPreset = fx.clarity || 'clean_total';
-      const intensity = fx.clarityIntensity || 80;
-      if (elements.clarityIntensitySlider) elements.clarityIntensitySlider.value = intensity;
-      if (elements.clarityIntensityVal) elements.clarityIntensityVal.textContent = intensity + '%';
-
-      if (elements.clarityPresetsGrid) {
-        elements.clarityPresetsGrid.querySelectorAll('.fx-preset-card').forEach((card) => {
-          card.classList.toggle('active', card.dataset.preset === currentSelectedClarityPreset);
-        });
-      }
-    }
-
     if (elements.btnOpenClarityModal && elements.clarityModal) {
       elements.btnOpenClarityModal.addEventListener('click', () => {
-        const initialTrackId = parseInt(state.selectedTrackId.replace('track-', '')) || 1;
-        if (elements.clarityTrackSelect) elements.clarityTrackSelect.value = initialTrackId;
+        const initialTrackId = parseInt(state.selectedTrackId.replace('track-', ''), 10) || 1;
+        if (elements.clarityTrackSelect) elements.clarityTrackSelect.value = String(initialTrackId);
         updateClarityModalUI(initialTrackId);
         openModal(elements.clarityModal);
       });
@@ -7211,7 +7296,8 @@
 
     if (elements.clarityTrackSelect) {
       elements.clarityTrackSelect.addEventListener('change', (e) => {
-        updateClarityModalUI(parseInt(e.target.value) || 1);
+        const trkId = parseInt(e.target.value, 10) || 1;
+        selectStudioTrack(trkId);
       });
     }
 
@@ -7221,20 +7307,31 @@
           currentSelectedClarityPreset = card.dataset.preset;
           elements.clarityPresetsGrid.querySelectorAll('.fx-preset-card').forEach((c) => c.classList.remove('active'));
           card.classList.add('active');
+
+          // Live audition in real-time
+          const trackId = parseInt(elements.clarityTrackSelect ? elements.clarityTrackSelect.value : '1', 10) || 1;
+          const intensity = parseInt(elements.clarityIntensitySlider ? elements.clarityIntensitySlider.value : '80', 10) || 80;
+          applyTrackClarity(trackId, currentSelectedClarityPreset, intensity);
         });
       });
     }
 
     if (elements.clarityIntensitySlider && elements.clarityIntensityVal) {
       elements.clarityIntensitySlider.addEventListener('input', (e) => {
-        elements.clarityIntensityVal.textContent = e.target.value + '%';
+        const val = parseInt(e.target.value, 10) || 80;
+        elements.clarityIntensityVal.textContent = val + '%';
+
+        // Live audition in real-time
+        const trackId = parseInt(elements.clarityTrackSelect ? elements.clarityTrackSelect.value : '1', 10) || 1;
+        applyTrackClarity(trackId, currentSelectedClarityPreset, val);
       });
     }
 
     if (elements.btnResetClarity) {
       elements.btnResetClarity.addEventListener('click', () => {
-        const trackId = parseInt(elements.clarityTrackSelect ? elements.clarityTrackSelect.value : '1') || 1;
+        const trackId = parseInt(elements.clarityTrackSelect ? elements.clarityTrackSelect.value : '1', 10) || 1;
         applyTrackClarity(trackId, null, 80);
+        updateClarityModalUI(trackId);
         closeModal(elements.clarityModal);
         showToast(state.language === 'id' ? `Track 0${trackId}: Pembersih suara di-reset ke normal.` : `Track 0${trackId}: Audio clarity reset to normal.`);
       });
@@ -7242,8 +7339,8 @@
 
     if (elements.btnApplyClarity) {
       elements.btnApplyClarity.addEventListener('click', () => {
-        const trackId = parseInt(elements.clarityTrackSelect ? elements.clarityTrackSelect.value : '1') || 1;
-        const intensity = parseInt(elements.clarityIntensitySlider ? elements.clarityIntensitySlider.value : '80') || 80;
+        const trackId = parseInt(elements.clarityTrackSelect ? elements.clarityTrackSelect.value : '1', 10) || 1;
+        const intensity = parseInt(elements.clarityIntensitySlider ? elements.clarityIntensitySlider.value : '80', 10) || 80;
         applyTrackClarity(trackId, currentSelectedClarityPreset, intensity);
         closeModal(elements.clarityModal);
         showToast(state.language === 'id' ? `Track 0${trackId}: Pembersih suara aktif (${currentSelectedClarityPreset.toUpperCase()}) ✨` : `Track 0${trackId}: Audio clarity activated (${currentSelectedClarityPreset.toUpperCase()}) ✨`);
@@ -7255,22 +7352,10 @@
     }
 
     // 3. Voice Modal
-    let currentSelectedVoicePreset = 'original';
-
-    function updateVoiceModalUI(trackId) {
-      const fx = (state.trackEffects && state.trackEffects[trackId]) || {};
-      currentSelectedVoicePreset = fx.voice || 'original';
-      if (elements.voicePresetsGrid) {
-        elements.voicePresetsGrid.querySelectorAll('.fx-preset-card').forEach((card) => {
-          card.classList.toggle('active', card.dataset.preset === currentSelectedVoicePreset);
-        });
-      }
-    }
-
     if (elements.btnOpenVoiceModal && elements.voiceModal) {
       elements.btnOpenVoiceModal.addEventListener('click', () => {
-        const initialTrackId = parseInt(state.selectedTrackId.replace('track-', '')) || 1;
-        if (elements.voiceTrackSelect) elements.voiceTrackSelect.value = initialTrackId;
+        const initialTrackId = parseInt(state.selectedTrackId.replace('track-', ''), 10) || 1;
+        if (elements.voiceTrackSelect) elements.voiceTrackSelect.value = String(initialTrackId);
         updateVoiceModalUI(initialTrackId);
         openModal(elements.voiceModal);
       });
@@ -7278,7 +7363,8 @@
 
     if (elements.voiceTrackSelect) {
       elements.voiceTrackSelect.addEventListener('change', (e) => {
-        updateVoiceModalUI(parseInt(e.target.value) || 1);
+        const trkId = parseInt(e.target.value, 10) || 1;
+        selectStudioTrack(trkId);
       });
     }
 
@@ -7288,14 +7374,19 @@
           currentSelectedVoicePreset = card.dataset.preset;
           elements.voicePresetsGrid.querySelectorAll('.fx-preset-card').forEach((c) => c.classList.remove('active'));
           card.classList.add('active');
+
+          // Live audition in real-time
+          const trackId = parseInt(elements.voiceTrackSelect ? elements.voiceTrackSelect.value : '1', 10) || 1;
+          applyTrackVoice(trackId, currentSelectedVoicePreset);
         });
       });
     }
 
     if (elements.btnBypassVoice) {
       elements.btnBypassVoice.addEventListener('click', () => {
-        const trackId = parseInt(elements.voiceTrackSelect ? elements.voiceTrackSelect.value : '1') || 1;
+        const trackId = parseInt(elements.voiceTrackSelect ? elements.voiceTrackSelect.value : '1', 10) || 1;
         applyTrackVoice(trackId, 'original');
+        updateVoiceModalUI(trackId);
         closeModal(elements.voiceModal);
         showToast(state.language === 'id' ? `Track 0${trackId}: Efek suara dinonaktifkan.` : `Track 0${trackId}: Voice FX disabled.`);
       });
@@ -7303,7 +7394,7 @@
 
     if (elements.btnApplyVoice) {
       elements.btnApplyVoice.addEventListener('click', () => {
-        const trackId = parseInt(elements.voiceTrackSelect ? elements.voiceTrackSelect.value : '1') || 1;
+        const trackId = parseInt(elements.voiceTrackSelect ? elements.voiceTrackSelect.value : '1', 10) || 1;
         applyTrackVoice(trackId, currentSelectedVoicePreset);
         closeModal(elements.voiceModal);
         showToast(state.language === 'id' ? `Track 0${trackId}: Efek pengubah suara aktif (${currentSelectedVoicePreset.toUpperCase()}) 🔊` : `Track 0${trackId}: Voice FX activated (${currentSelectedVoicePreset.toUpperCase()}) 🔊`);
@@ -7349,6 +7440,12 @@
     // Initial render
     renderProjectsGrid();
     renderLibraryTable();
+
+    // Expose helpers for testing and external triggers
+    window.selectStudioTrack = selectStudioTrack;
+    window.applyTrackClarity = applyTrackClarity;
+    window.applyTrackVoice = applyTrackVoice;
+    window.downloadCurrentMix = downloadCurrentMix;
 
     setTimeout(() => {
       showToast(state.language === 'id' ? 'Suno Studio Siap: Bahasa Indonesia Aktif 🇮🇩' : 'Suno Studio Ready: English Active 🇺🇸');
