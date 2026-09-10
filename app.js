@@ -344,7 +344,7 @@
     activeProjectId: 'proj-1',
     activeProject: null,
     isPlaying: false,
-    currentTime: 24.8,
+    currentTime: 0.0,
     totalDuration: 225.0,
     timelineWidthPx: 2400,
     pxPerSecond: 2400 / 225.0,
@@ -1834,13 +1834,16 @@
     if (!song) return;
 
     const audioBuf = AUDIO_BUFFERS[songId] || song.audioBuffer;
-    const clipDur = (audioBuf && audioBuf.duration) ? audioBuf.duration : (song.durationSec || 60.0);
+    const audioEl = AUDIO_ELEMENTS[songId] || song.audioElement;
+    const clipDur = (audioBuf && audioBuf.duration) ? audioBuf.duration :
+                    (audioEl && audioEl.duration && !isNaN(audioEl.duration)) ? audioEl.duration :
+                    (song.durationSec || 60.0);
 
     const newClip = {
       id: 'clip-' + Date.now(),
       trackId: 4,
       title: song.title,
-      startSec: snapTime(state.currentTime || 0),
+      startSec: 0.0,
       durationSec: clipDur,
       fadeInSec: 0.5,
       fadeOutSec: 1.0,
@@ -1849,10 +1852,14 @@
       key: song.key || 'A min',
       energy: song.energy || '80% (High)',
       waveformSeed: 4,
-      audioBuffer: audioBuf
+      audioBuffer: audioBuf,
+      audioElement: audioEl
     };
     if (audioBuf) {
       AUDIO_BUFFERS[newClip.id] = audioBuf;
+    }
+    if (audioEl) {
+      AUDIO_ELEMENTS[newClip.id] = audioEl;
     }
 
     ANALYSIS_PROFILES[newClip.id] = {
@@ -1876,9 +1883,10 @@
     state.clips.push(newClip);
     renderClips();
     selectClip(newClip.id);
+    seekTo(0);
 
     switchView('studio');
-    showToast(`Added "${song.title}" to Track 4`);
+    showToast(state.language === 'id' ? `"${song.title}" masuk ke Track 4 • Tekan Spasi untuk Putar 🔊` : `"${song.title}" added to Track 4 • Press Space to Play 🔊`);
     triggerAutosave();
   }
 
@@ -1906,7 +1914,20 @@
     state.pendingUploadFile = file;
     state.pendingDecodedBuffer = null;
 
-    // Decode actual audio file in background
+    // Create immediate native Audio element for guaranteed instant playback
+    let audioUrl = null;
+    let audioEl = null;
+    try {
+      audioUrl = URL.createObjectURL(file);
+      audioEl = new Audio(audioUrl);
+      audioEl.preload = 'auto';
+      state.pendingAudioUrl = audioUrl;
+      state.pendingAudioElement = audioEl;
+    } catch (e) {
+      console.warn('Could not create ObjectURL for file', e);
+    }
+
+    // Decode audio file in background
     const ctx = getAudioContext();
     if (ctx && file.arrayBuffer) {
       file.arrayBuffer().then((ab) => {
@@ -1922,7 +1943,7 @@
             }
           }
         }).catch((err) => {
-          console.warn('Audio decoding failed:', err);
+          console.warn('Audio decoding fallback to AudioElement:', err);
         });
       }).catch((err) => {
         console.warn('File reading failed:', err);
@@ -1979,7 +2000,8 @@
     const energyVal = 70 + Math.floor((fileName.length * 3) % 26);
     const energyLabel = energyVal > 80 ? `${energyVal}% (High)` : `${energyVal}% (Med)`;
 
-    const defaultDurationSec = (state.pendingDecodedBuffer && state.pendingDecodedBuffer.duration) ? state.pendingDecodedBuffer.duration : 155.0;
+    const defaultDurationSec = (state.pendingDecodedBuffer && state.pendingDecodedBuffer.duration) ? state.pendingDecodedBuffer.duration :
+                              (state.pendingAudioElement && state.pendingAudioElement.duration && !isNaN(state.pendingAudioElement.duration)) ? state.pendingAudioElement.duration : 155.0;
     const defaultDurationStr = formatTime(defaultDurationSec);
 
     state.pendingUploadItem = {
@@ -1996,11 +2018,15 @@
       energyVal: energyVal,
       status: 'analyzed',
       dateAdded: 'Just now',
-      audioBuffer: state.pendingDecodedBuffer || null
+      audioBuffer: state.pendingDecodedBuffer || null,
+      audioElement: state.pendingAudioElement || null
     };
 
     if (state.pendingDecodedBuffer) {
       AUDIO_BUFFERS[state.pendingUploadItem.id] = state.pendingDecodedBuffer;
+    }
+    if (state.pendingAudioElement) {
+      AUDIO_ELEMENTS[state.pendingUploadItem.id] = state.pendingAudioElement;
     }
 
     if (elements.previewSongTitle) elements.previewSongTitle.textContent = cleanTitle;
@@ -2093,11 +2119,15 @@
   // --------------------------------------------------------------------------
   let audioCtx = null;
   const AUDIO_BUFFERS = {};
+  const AUDIO_ELEMENTS = {};
   const activeAudioSources = {};
+  const activeAudioElements = {};
+  const activeAudioTimeouts = {};
   let trackNodes = {};
   let masterGainNode = null;
   let masterAnalyserNode = null;
   let previewSourceNode = null;
+  let previewAudioElement = null;
 
   function getAudioContext() {
     if (!audioCtx) {
@@ -2110,6 +2140,19 @@
       audioCtx.resume().catch(() => {});
     }
     return audioCtx;
+  }
+
+  function unlockAudioContext() {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    ['click', 'keydown', 'mousedown', 'touchstart'].forEach((type) => {
+      window.addEventListener(type, unlockAudioContext, { passive: true });
+    });
   }
 
   function ensureTrackAudioNodes() {
@@ -2216,6 +2259,17 @@
         nodes.eqHigh.gain.setTargetAtTime(trk.eq.high || 0, audioCtx.currentTime, 0.02);
       } catch (e) {}
     }
+
+    // Also update any active HTML5 audio elements on this track
+    state.clips.forEach((clip) => {
+      if (clip.trackId === trackId && activeAudioElements[clip.id]) {
+        const el = activeAudioElements[clip.id];
+        const masterVol = (state.mixer && state.mixer.master) ? state.mixer.master.vol : 0;
+        const masterGain = Math.pow(10, masterVol / 20);
+        el.volume = Math.max(0, Math.min(1, effectiveGain * masterGain));
+        el.muted = trk.mute;
+      }
+    });
   }
 
   function updateMasterAudioNode() {
@@ -2227,6 +2281,17 @@
     } catch (e) {
       masterGainNode.gain.value = g;
     }
+
+    // Also update all active HTML5 audio elements
+    state.clips.forEach((clip) => {
+      if (activeAudioElements[clip.id]) {
+        const el = activeAudioElements[clip.id];
+        const trk = state.tracks[clip.trackId] || { vol: 0, gainTrim: 0, mute: false };
+        const effectiveGain = !trk.mute ? Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20) : 0;
+        el.volume = Math.max(0, Math.min(1, effectiveGain * g));
+        el.muted = trk.mute;
+      }
+    });
   }
 
   function generateProceduralDrumsBuffer(ctx, bpm) {
@@ -2415,21 +2480,58 @@
       const clipEnd = clip.startSec + clip.durationSec;
       if (currentStudioTime >= clipEnd) return;
 
+      // 1. Check for native HTML5 Audio Element playback (e.g. uploaded MP3/WAV tracks)
+      const el = clip.audioElement || AUDIO_ELEMENTS[clip.id];
+      if (el) {
+        const trk = state.tracks[clip.trackId] || { vol: 0, gainTrim: 0, mute: false, pan: 0 };
+        const anySolo = Object.values(state.tracks).some((t) => t.solo);
+        let effectiveGain = 1.0;
+        if (anySolo) {
+          effectiveGain = (trk.solo && !trk.mute) ? Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20) : 0;
+        } else {
+          effectiveGain = !trk.mute ? Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20) : 0;
+        }
+        const masterVol = (state.mixer && state.mixer.master) ? state.mixer.master.vol : 0;
+        const masterGain = Math.pow(10, masterVol / 20);
+        const finalVol = Math.max(0, Math.min(1, effectiveGain * masterGain));
+
+        el.volume = finalVol;
+        el.muted = trk.mute;
+
+        if (currentStudioTime >= clip.startSec && currentStudioTime < clipEnd) {
+          el.currentTime = Math.max(0, currentStudioTime - clip.startSec);
+          const playPromise = el.play();
+          if (playPromise !== undefined) {
+            playPromise.catch((e) => console.warn('AudioElement play note:', e));
+          }
+          activeAudioElements[clip.id] = el;
+        } else if (currentStudioTime < clip.startSec) {
+          const delayMs = (clip.startSec - currentStudioTime) * 1000;
+          const tid = setTimeout(() => {
+            if (state.isPlaying) {
+              el.currentTime = 0;
+              el.play().catch(() => {});
+              activeAudioElements[clip.id] = el;
+            }
+          }, delayMs);
+          activeAudioTimeouts[clip.id] = tid;
+        }
+        return;
+      }
+
+      // 2. Web Audio Buffer Source Node (Procedural tracks and decoded buffers)
       const buf = getClipAudioBuffer(clip);
       if (!buf) return;
 
       let when = now;
       let offset = 0;
-      let duration = clip.durationSec;
 
       if (currentStudioTime < clip.startSec) {
         when = now + (clip.startSec - currentStudioTime);
         offset = 0;
-        duration = clip.durationSec;
       } else {
         when = now;
         offset = currentStudioTime - clip.startSec;
-        duration = clipEnd - currentStudioTime;
       }
 
       const bufOffset = offset % buf.duration;
@@ -2453,7 +2555,15 @@
           clipGain.connect(masterGainNode);
         }
 
-        source.start(when, bufOffset, duration);
+        // Start safely with 2 arguments
+        source.start(when, bufOffset);
+
+        // Stop cleanly at clipEnd
+        const stopTime = when + (clipEnd - Math.max(currentStudioTime, clip.startSec));
+        try {
+          source.stop(stopTime);
+        } catch (e) {}
+
         activeAudioSources[clip.id] = { source, clipGain };
       } catch (err) {
         console.warn('Error starting audio source for clip:', clip.id, err);
@@ -2462,6 +2572,7 @@
   }
 
   function stopAudioPlayback() {
+    // 1. Stop all Web Audio buffer sources
     Object.keys(activeAudioSources).forEach((id) => {
       const item = activeAudioSources[id];
       if (item && item.source) {
@@ -2474,12 +2585,52 @@
     for (const id in activeAudioSources) {
       delete activeAudioSources[id];
     }
+
+    // 2. Pause and reset all active HTML5 audio elements
+    Object.keys(activeAudioElements).forEach((id) => {
+      const el = activeAudioElements[id];
+      if (el) {
+        try {
+          el.pause();
+          el.currentTime = 0;
+        } catch (e) {}
+      }
+    });
+    for (const id in activeAudioElements) {
+      delete activeAudioElements[id];
+    }
+
+    // 3. Clear pending timeout triggers
+    Object.keys(activeAudioTimeouts).forEach((id) => {
+      clearTimeout(activeAudioTimeouts[id]);
+    });
+    for (const id in activeAudioTimeouts) {
+      delete activeAudioTimeouts[id];
+    }
   }
 
   function playAudioPreview(itemId, maxSec = 3.5) {
+    stopAudioPreview();
+
+    // 1. If native Audio element is available, use it directly!
+    if (AUDIO_ELEMENTS[itemId]) {
+      try {
+        const el = AUDIO_ELEMENTS[itemId];
+        el.currentTime = 0;
+        el.volume = 0.85;
+        const p = el.play();
+        if (p !== undefined) {
+          p.catch((e) => console.warn('Preview play note:', e));
+        }
+        previewAudioElement = el;
+        setTimeout(() => stopAudioPreview(), maxSec * 1000);
+        return;
+      } catch (e) {}
+    }
+
+    // 2. Web Audio Preview
     const ctx = getAudioContext();
     if (!ctx) return;
-    stopAudioPreview();
 
     let buf = AUDIO_BUFFERS[itemId];
     if (!buf) {
@@ -2496,7 +2647,7 @@
 
       previewSourceNode.connect(gain);
       gain.connect(ctx.destination);
-      previewSourceNode.start(0, 0, maxSec);
+      previewSourceNode.start(0, 0);
       setTimeout(stopAudioPreview, maxSec * 1000);
     } catch (e) {
       console.warn('Preview playback error:', e);
@@ -2504,6 +2655,13 @@
   }
 
   function stopAudioPreview() {
+    if (previewAudioElement) {
+      try {
+        previewAudioElement.pause();
+        previewAudioElement.currentTime = 0;
+      } catch (e) {}
+      previewAudioElement = null;
+    }
     if (previewSourceNode) {
       try {
         previewSourceNode.stop();

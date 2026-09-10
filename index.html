@@ -6,7 +6,7 @@
   <title>Suno Music Mixing Studio</title>
   <meta name="description" content="Browser-based dark futuristic music mixing studio for Suno AI generated songs and stems.">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.1.0">
 </head>
 <body>
   <div class="app-shell" id="app">
@@ -297,7 +297,7 @@
           </div>
 
           <!-- Playhead Global Indicator Line -->
-          <div class="playhead-line" id="globalPlayhead" style="left: 360px;">
+          <div class="playhead-line" id="globalPlayhead" style="left: 210px;">
             <div class="playhead-head" id="playheadHead" title="Scrub Playhead"></div>
           </div>
 
@@ -1441,7 +1441,7 @@
         </div>
 
         <div class="timecode-display" title="Current Playhead Position / Total Length">
-          <span class="timecode-current tabular-nums" id="timecodeCurrent">00:24.80</span>
+            <span class="timecode-current tabular-nums" id="timecodeCurrent">00:00.00</span>
           <span class="timecode-total tabular-nums" id="timecodeTotal">/ 03:45.00</span>
         </div>
       </div>
@@ -2441,6 +2441,6 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Studio JavaScript Engine -->
-  <script src="app.js"></script>
+  <script src="app.js?v=2.1.0"></script>
 </body>
 </html>
