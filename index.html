@@ -6,7 +6,7 @@
   <title>Suno Music Mixing Studio</title>
   <meta name="description" content="Browser-based dark futuristic music mixing studio for Suno AI generated songs and stems.">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
-  <link rel="stylesheet" href="styles.css?v=2.2.0">
+  <link rel="stylesheet" href="styles.css?v=2.3.0">
 </head>
 <body>
   <div class="app-shell" id="app">
@@ -251,6 +251,22 @@
               <span data-i18n="toolbar.auto_mix">Campur Otomatis</span>
             </button>
             <div class="divider-vertical" style="height: 16px; margin: 0 4px;" aria-hidden="true"></div>
+            <button class="btn btn-secondary btn-xs" id="btnOpenClarityModal" title="Pembersih Suara & Vokal Jernih (Audio Clarity)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+              <span data-i18n="toolbar.clarity">Pembersih Suara</span>
+            </button>
+            <button class="btn btn-secondary btn-xs" id="btnOpenVoiceModal" title="Pengubah Suara Otomatis (Voice Changer FX)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+              <span data-i18n="toolbar.voice">Pengubah Suara</span>
+            </button>
+            <div class="divider-vertical" style="height: 16px; margin: 0 4px;" aria-hidden="true"></div>
             <button class="btn btn-primary btn-xs" id="btnStudioImportAudio" title="Import Audio File directly to Track (MP3, WAV, FLAC, OGG)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -261,6 +277,36 @@
             </button>
             <input type="file" id="studioDirectFileInput" accept=".mp3,.wav,.ogg,.flac,.m4a,audio/*" style="display: none;">
           </div>
+        </div>
+
+        <!-- Quick Start Beginner Guide Banner (User-Friendly Guide) -->
+        <div class="quick-start-banner" id="quickStartBanner" role="region" aria-label="Quick Start Guide">
+          <div class="quick-start-content">
+            <div class="quick-start-badge">
+              <span class="pulse-dot" style="background: var(--accent);"></span>
+              <span data-i18n="quickstart.badge">Panduan Cepat Studio</span>
+            </div>
+            <div class="quick-start-steps">
+              <div class="step-item" id="stepImportGuide">
+                <span class="step-number">1</span>
+                <span class="step-icon">📂</span>
+                <span class="step-text" data-i18n="quickstart.step1"><strong>Masukkan Lagu:</strong> Drag & Drop atau klik tombol <em>Import Audio</em></span>
+              </div>
+              <div class="step-arrow">→</div>
+              <div class="step-item" id="stepFxGuide">
+                <span class="step-number">2</span>
+                <span class="step-icon">✨</span>
+                <span class="step-text" data-i18n="quickstart.step2"><strong>Jernihkan / Ubah Suara:</strong> Pakai <em>Pembersih Suara</em> atau <em>Pengubah Suara</em></span>
+              </div>
+              <div class="step-arrow">→</div>
+              <div class="step-item" id="stepPlayGuide">
+                <span class="step-number">3</span>
+                <span class="step-icon">▶</span>
+                <span class="step-text" data-i18n="quickstart.step3"><strong>Putar Lagu:</strong> Tekan tombol <em>Play</em> atau tombol <em>Spasi</em></span>
+              </div>
+            </div>
+          </div>
+          <button class="icon-btn-xs" id="btnCloseQuickStart" title="Sembunyikan Panduan" aria-label="Sembunyikan Panduan">✕</button>
         </div>
 
         <!-- Multi-Track Timeline Viewport -->
@@ -322,6 +368,7 @@
                     <div class="track-color-indicator track-color-cyan"></div>
                     <span class="track-name" title="Suno Lead Vocals">01 • Lead Vocals</span>
                   </div>
+                  <div class="track-effect-tag" id="trackFxTag-1" style="display: none;"></div>
                   <div class="track-mute-solo">
                     <button class="mini-toggle-btn mute" data-track="1" title="Mute Track">M</button>
                     <button class="mini-toggle-btn solo" data-track="1" title="Solo Track">S</button>
@@ -359,6 +406,7 @@
                     <div class="track-color-indicator track-color-purple"></div>
                     <span class="track-name" title="Synth & Bass Arp">02 • Synth & Bass</span>
                   </div>
+                  <div class="track-effect-tag" id="trackFxTag-2" style="display: none;"></div>
                   <div class="track-mute-solo">
                     <button class="mini-toggle-btn mute" data-track="2" title="Mute Track">M</button>
                     <button class="mini-toggle-btn solo" data-track="2" title="Solo Track">S</button>
@@ -396,6 +444,7 @@
                     <div class="track-color-indicator track-color-emerald"></div>
                     <span class="track-name" title="Drums & Percussion">03 • Cyber Drums</span>
                   </div>
+                  <div class="track-effect-tag" id="trackFxTag-3" style="display: none;"></div>
                   <div class="track-mute-solo">
                     <button class="mini-toggle-btn mute" data-track="3" title="Mute Track">M</button>
                     <button class="mini-toggle-btn solo" data-track="3" title="Solo Track">S</button>
@@ -433,6 +482,7 @@
                     <div class="track-color-indicator track-color-amber"></div>
                     <span class="track-name" title="FX & Transitions">04 • FX & Drops</span>
                   </div>
+                  <div class="track-effect-tag" id="trackFxTag-4" style="display: none;"></div>
                   <div class="track-mute-solo">
                     <button class="mini-toggle-btn mute" data-track="4" title="Mute Track">M</button>
                     <button class="mini-toggle-btn solo" data-track="4" title="Solo Track">S</button>
@@ -2442,7 +2492,175 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="btnDismissPresetsModal">Close</button>
+  <!-- ======================================================================
+       10. Modal: Pembersih Suara (Audio Clarity & De-Noise Suite)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="clarityModal" role="dialog" aria-modal="true" aria-labelledby="clarityModalTitle">
+    <div class="modal-container" style="width: 540px;">
+      <div class="modal-header">
+        <div class="modal-title" id="clarityModalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <span data-i18n="clarity.modal_title">Pembersih Suara & Vokal Jernih</span>
+        </div>
+        <button class="icon-btn" id="btnCloseClarityModal" title="Close" aria-label="Tutup Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" style="font-size: 11px; font-weight: 600;" data-i18n="clarity.target_track">Terapkan Pada Track:</label>
+          <select class="form-input" id="clarityTrackSelect" style="height: 32px; font-size: 12px;">
+            <option value="1" selected>Track 01 • Lead Vocals (Vokal Utama)</option>
+            <option value="2">Track 02 • Synth & Bass</option>
+            <option value="3">Track 03 • Cyber Drums</option>
+            <option value="4">Track 04 • FX & Uploaded Stems</option>
+            <option value="all">Semua Track Sekaligus</option>
+          </select>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="clarity.choose_preset">
+          Pilih Mode Pembersih Suara:
+        </div>
+
+        <div class="fx-preset-grid" id="clarityPresetsGrid">
+          <div class="fx-preset-card active" data-preset="clean_total">
+            <div class="fx-card-icon">🧹</div>
+            <div class="fx-card-title" data-i18n="clarity.preset_total_title">Pembersih Total & Anti-Mendem</div>
+            <div class="fx-card-desc" data-i18n="clarity.preset_total_desc">Memotong dengung bas & frekuensi keruh, seketika vokal terdengar jernih bersih.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="studio_mic">
+            <div class="fx-card-icon">🎙️</div>
+            <div class="fx-card-title" data-i18n="clarity.preset_mic_title">Studio Broadcast Mic</div>
+            <div class="fx-card-desc" data-i18n="clarity.preset_mic_desc">Artikulasi vokal tebal, dekat & mewah standar rekaman siaran profesional.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="anti_hiss">
+            <div class="fx-card-icon">🔇</div>
+            <div class="fx-card-title" data-i18n="clarity.preset_hiss_title">Anti-Noise & Desis Hiss</div>
+            <div class="fx-card-desc" data-i18n="clarity.preset_hiss_desc">Meredam desis mikrofon (*hiss*) & suara hembusan angin latar belakang.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="warm_crisp">
+            <div class="fx-card-icon">💎</div>
+            <div class="fx-card-title" data-i18n="clarity.preset_crisp_title">Warm & Crisp Shimmer</div>
+            <div class="fx-card-desc" data-i18n="clarity.preset_crisp_desc">Vokal renyah berkilau tanpa menusuk atau sakit di telinga pendengar.</div>
+          </div>
+        </div>
+
+        <!-- Intensity Slider -->
+        <div class="clarity-slider-wrap">
+          <div class="clarity-slider-header">
+            <span data-i18n="clarity.intensity_label">Kekuatan Pembersihan Suara</span>
+            <span class="clarity-slider-val" id="clarityIntensityVal">80%</span>
+          </div>
+          <input type="range" class="slider-input" id="clarityIntensitySlider" min="20" max="100" value="80" step="5" style="width: 100%;">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button type="button" class="btn btn-secondary" id="btnResetClarity" data-i18n="clarity.btn_reset">Reset Normal</button>
+        <button type="button" class="btn btn-primary" id="btnApplyClarity" data-i18n="clarity.btn_apply">Terapkan Kejernihan 🔊</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       11. Modal: Tools Pengubah Suara Otomatis (Voice Transformer FX)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="voiceModal" role="dialog" aria-modal="true" aria-labelledby="voiceModalTitle">
+    <div class="modal-container" style="width: 560px;">
+      <div class="modal-header">
+        <div class="modal-title" id="voiceModalTitle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+          <span data-i18n="voice.modal_title">Tools Otomatis Pengubah Suara (Voice FX)</span>
+        </div>
+        <button class="icon-btn" id="btnCloseVoiceModal" title="Close" aria-label="Tutup Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" style="font-size: 11px; font-weight: 600;" data-i18n="voice.target_track">Terapkan Pada Track:</label>
+          <select class="form-input" id="voiceTrackSelect" style="height: 32px; font-size: 12px;">
+            <option value="1" selected>Track 01 • Lead Vocals (Vokal Utama)</option>
+            <option value="2">Track 02 • Synth & Bass</option>
+            <option value="3">Track 03 • Cyber Drums</option>
+            <option value="4">Track 04 • FX & Uploaded Stems</option>
+          </select>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="voice.choose_preset">
+          Pilih Karakter Efek Suara:
+        </div>
+
+        <div class="fx-preset-grid" id="voicePresetsGrid">
+          <div class="fx-preset-card active" data-preset="original">
+            <div class="fx-card-icon">🔄</div>
+            <div class="fx-card-title" data-i18n="voice.preset_original_title">Suara Asli / Normal</div>
+            <div class="fx-card-desc" data-i18n="voice.preset_original_desc">Kembalikan vokal ke nada alami tanpa modifikasi efek.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="chipmunk">
+            <div class="fx-card-icon">🐿️</div>
+            <div class="fx-card-title" data-i18n="voice.preset_chipmunk_title">Chipmunk / Anime</div>
+            <div class="fx-card-desc" data-i18n="voice.preset_chipmunk_desc">Suara imut, lincah, nada tinggi ala kartun animasi Jepang.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="monster">
+            <div class="fx-card-icon">👹</div>
+            <div class="fx-card-title" data-i18n="voice.preset_monster_title">Monster / Deep Bass</div>
+            <div class="fx-card-desc" data-i18n="voice.preset_monster_desc">Suara berat, seram, berwibawa nada rendah ala trailer film.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="telephone">
+            <div class="fx-card-icon">📻</div>
+            <div class="fx-card-title" data-i18n="voice.preset_telephone_title">Radio & Telepon Jadul</div>
+            <div class="fx-card-desc" data-i18n="voice.preset_telephone_desc">Filter walkie-talkie / telepon jadul nuansa lo-fi retro.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="robot">
+            <div class="fx-card-icon">🤖</div>
+            <div class="fx-card-title" data-i18n="voice.preset_robot_title">Robot Cyberpunk</div>
+            <div class="fx-card-desc" data-i18n="voice.preset_robot_desc">Resonansi mekanik sci-fi futuristik ala kecerdasan buatan.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="underwater">
+            <div class="fx-card-icon">🌊</div>
+            <div class="fx-card-title" data-i18n="voice.preset_underwater_title">Dalam Air (Underwater)</div>
+            <div class="fx-card-desc" data-i18n="voice.preset_underwater_desc">Suara terendam sayup-sayup redam di kedalaman air.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="cathedral">
+            <div class="fx-card-icon">🏛️</div>
+            <div class="fx-card-title" data-i18n="voice.preset_cathedral_title">Gema Katedral Megah</div>
+            <div class="fx-card-desc" data-i18n="voice.preset_cathedral_desc">Pantulan reverb luas megah ala aula konser katedral.</div>
+          </div>
+
+          <div class="fx-preset-card" data-preset="crystal">
+            <div class="fx-card-icon">💎</div>
+            <div class="fx-card-title" data-i18n="voice.preset_crystal_title">Vokal Crystal Clear</div>
+            <div class="fx-card-desc" data-i18n="voice.preset_crystal_desc">Artikulasi vokal jernih tajam berdiri tegak di depan mix.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button type="button" class="btn btn-secondary" id="btnBypassVoice" data-i18n="voice.btn_bypass">Matikan Efek</button>
+        <button type="button" class="btn btn-primary" id="btnApplyVoice" data-i18n="voice.btn_apply">Terapkan Efek Suara 🔊</button>
       </div>
     </div>
   </div>
@@ -2451,6 +2669,6 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Studio JavaScript Engine -->
-  <script src="app.js?v=2.2.0"></script>
+  <script src="app.js?v=2.3.0"></script>
 </body>
 </html>

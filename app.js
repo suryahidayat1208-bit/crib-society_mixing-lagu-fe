@@ -365,6 +365,12 @@
     pendingDeleteProjId: null,
     pendingRenameProjId: null,
     isReanalyzing: false,
+    trackEffects: {
+      1: { clarity: null, voice: null, clarityIntensity: 80 },
+      2: { clarity: null, voice: null, clarityIntensity: 80 },
+      3: { clarity: null, voice: null, clarityIntensity: 80 },
+      4: { clarity: null, voice: null, clarityIntensity: 80 }
+    },
     tracks: {
       1: {
         name: '01 • Lead Vocals',
@@ -597,6 +603,26 @@
     snapSelect: document.getElementById('snapSelect'),
     btnStudioImportAudio: document.getElementById('btnStudioImportAudio'),
     studioDirectFileInput: document.getElementById('studioDirectFileInput'),
+
+    // Quick Start Banner & Clarity / Voice Tools
+    quickStartBanner: document.getElementById('quickStartBanner'),
+    btnCloseQuickStart: document.getElementById('btnCloseQuickStart'),
+    btnOpenClarityModal: document.getElementById('btnOpenClarityModal'),
+    btnCloseClarityModal: document.getElementById('btnCloseClarityModal'),
+    clarityModal: document.getElementById('clarityModal'),
+    clarityTrackSelect: document.getElementById('clarityTrackSelect'),
+    clarityPresetsGrid: document.getElementById('clarityPresetsGrid'),
+    clarityIntensitySlider: document.getElementById('clarityIntensitySlider'),
+    clarityIntensityVal: document.getElementById('clarityIntensityVal'),
+    btnResetClarity: document.getElementById('btnResetClarity'),
+    btnApplyClarity: document.getElementById('btnApplyClarity'),
+    btnOpenVoiceModal: document.getElementById('btnOpenVoiceModal'),
+    btnCloseVoiceModal: document.getElementById('btnCloseVoiceModal'),
+    voiceModal: document.getElementById('voiceModal'),
+    voiceTrackSelect: document.getElementById('voiceTrackSelect'),
+    voicePresetsGrid: document.getElementById('voicePresetsGrid'),
+    btnBypassVoice: document.getElementById('btnBypassVoice'),
+    btnApplyVoice: document.getElementById('btnApplyVoice'),
 
     // Phase 5 Mixer Console & Channel Strip Elements
     btnToggleMixerDock: document.getElementById('btnToggleMixerDock'),
@@ -2305,6 +2331,7 @@
   const AUDIO_ELEMENTS = {};
   const activeAudioSources = {};
   const activeAudioElements = {};
+  const activeElementSources = {};
   const activeAudioTimeouts = {};
   let trackNodes = {};
   let masterGainNode = null;
@@ -2361,6 +2388,25 @@
           }
         } catch (e) {}
 
+        const clarityLowCut = ctx.createBiquadFilter();
+        clarityLowCut.type = 'highpass';
+        clarityLowCut.frequency.value = 20;
+
+        const clarityDeMud = ctx.createBiquadFilter();
+        clarityDeMud.type = 'peaking';
+        clarityDeMud.frequency.value = 400;
+        clarityDeMud.Q.value = 1.2;
+        clarityDeMud.gain.value = 0;
+
+        const clarityHighAir = ctx.createBiquadFilter();
+        clarityHighAir.type = 'highshelf';
+        clarityHighAir.frequency.value = 9000;
+        clarityHighAir.gain.value = 0;
+
+        const voiceFilter = ctx.createBiquadFilter();
+        voiceFilter.type = 'allpass';
+        voiceFilter.frequency.value = 1000;
+
         const eqLow = ctx.createBiquadFilter();
         eqLow.type = 'lowshelf';
         eqLow.frequency.value = 250;
@@ -2374,6 +2420,10 @@
         eqHigh.type = 'highshelf';
         eqHigh.frequency.value = 4000;
 
+        clarityLowCut.connect(clarityDeMud);
+        clarityDeMud.connect(clarityHighAir);
+        clarityHighAir.connect(voiceFilter);
+        voiceFilter.connect(eqLow);
         eqLow.connect(eqMid);
         eqMid.connect(eqHigh);
         eqHigh.connect(gainNode);
@@ -2386,6 +2436,10 @@
         }
 
         trackNodes[id] = {
+          clarityLowCut,
+          clarityDeMud,
+          clarityHighAir,
+          voiceFilter,
           eqLow,
           eqMid,
           eqHigh,
@@ -2681,6 +2735,13 @@
         el.volume = finalVol;
         el.muted = trk.mute;
 
+        // Apply pitch rate from voice transformer if set
+        const fx = (state.trackEffects && state.trackEffects[clip.trackId]) || {};
+        let rate = 1.0;
+        if (fx.voice === 'chipmunk') rate = 1.35;
+        else if (fx.voice === 'monster') rate = 0.80;
+        try { el.playbackRate = rate; } catch (e) {}
+
         if (currentStudioTime >= clip.startSec && currentStudioTime < clipEnd) {
           el.currentTime = Math.max(0, currentStudioTime - clip.startSec);
           const playPromise = el.play();
@@ -2726,13 +2787,20 @@
           source.loop = true;
         }
 
+        // Apply pitch rate from voice transformer
+        const fx = (state.trackEffects && state.trackEffects[clip.trackId]) || {};
+        let rate = 1.0;
+        if (fx.voice === 'chipmunk') rate = 1.35;
+        else if (fx.voice === 'monster') rate = 0.80;
+        try { source.playbackRate.setValueAtTime(rate, when); } catch (e) {}
+
         const clipGain = ctx.createGain();
         clipGain.gain.setValueAtTime(1.0, when);
 
         const trackNode = trackNodes[clip.trackId];
         if (trackNode) {
           source.connect(clipGain);
-          clipGain.connect(trackNode.eqLow);
+          clipGain.connect(trackNode.clarityLowCut);
         } else {
           source.connect(clipGain);
           clipGain.connect(masterGainNode);
@@ -6310,6 +6378,47 @@
       'toolbar.mixer': 'Mixer',
       'toolbar.auto_mix': 'Auto Mix',
       'toolbar.import_audio': 'Import Audio',
+      'toolbar.clarity': 'Audio Clarity',
+      'toolbar.voice': 'Voice FX',
+      'quickstart.badge': 'Studio Quick Guide',
+      'quickstart.step1': '<strong>Import Music:</strong> Drag & Drop or click <em>Import Audio</em>',
+      'quickstart.step2': '<strong>Clean / Change Voice:</strong> Use <em>Audio Clarity</em> or <em>Voice FX</em>',
+      'quickstart.step3': '<strong>Play Music:</strong> Press <em>Play</em> or press <em>Space</em>',
+      'clarity.modal_title': 'Audio Clarity & Vocal Cleaner',
+      'clarity.target_track': 'Apply to Track:',
+      'clarity.choose_preset': 'Choose Audio Cleaner Mode:',
+      'clarity.preset_total_title': 'Ultra Clean & De-Mud',
+      'clarity.preset_total_desc': 'Cuts bass rumble & boxy mud, instantly making vocals crystal clear.',
+      'clarity.preset_mic_title': 'Studio Broadcast Mic',
+      'clarity.preset_mic_desc': 'Adds broadcast microphone presence and professional studio sparkle.',
+      'clarity.preset_hiss_title': 'Anti-Noise & Hiss Reducer',
+      'clarity.preset_hiss_desc': 'Reduces microphone hiss, background hum, and room noise.',
+      'clarity.preset_crisp_title': 'Warm & Crisp Shimmer',
+      'clarity.preset_crisp_desc': 'Smooth harmonic treble brilliance without harsh sibilance.',
+      'clarity.intensity_label': 'Clarity Intensity',
+      'clarity.btn_reset': 'Reset Normal',
+      'clarity.btn_apply': 'Apply Clarity 🔊',
+      'voice.modal_title': 'Automatic Voice Transformer (Voice FX)',
+      'voice.target_track': 'Apply to Track:',
+      'voice.choose_preset': 'Choose Voice Character:',
+      'voice.preset_original_title': 'Original / Normal Voice',
+      'voice.preset_original_desc': 'Reset vocals to natural pitch and frequency without effects.',
+      'voice.preset_chipmunk_title': 'Chipmunk / Anime',
+      'voice.preset_chipmunk_desc': 'Cute, fast, high-pitched anime cartoon style voice.',
+      'voice.preset_monster_title': 'Monster / Deep Bass',
+      'voice.preset_monster_desc': 'Deep, menacing, authoritative low pitch movie trailer voice.',
+      'voice.preset_telephone_title': 'Vintage Radio & Phone',
+      'voice.preset_telephone_desc': 'Walkie-talkie / telephone bandpass vintage lo-fi filter.',
+      'voice.preset_robot_title': 'Cyberpunk Robot',
+      'voice.preset_robot_desc': 'Metallic, futuristic sci-fi artificial intelligence resonance.',
+      'voice.preset_underwater_title': 'Underwater (Lo-Fi Muffled)',
+      'voice.preset_underwater_desc': 'Dampened muffled sound submerged deep underwater.',
+      'voice.preset_cathedral_title': 'Cathedral Space Reverb',
+      'voice.preset_cathedral_desc': 'Grand majestic concert hall reverberation.',
+      'voice.preset_crystal_title': 'Crystal Clear Vocal',
+      'voice.preset_crystal_desc': 'Crisp, articulate vocal standing forward in the mix.',
+      'voice.btn_bypass': 'Disable Effects',
+      'voice.btn_apply': 'Apply Voice FX 🔊',
       'mixer.console_title': 'MULTI-CHANNEL MIXER CONSOLE',
       'mixer.quick_preset_placeholder': 'Preset: Select...',
       'inspector.tab_clip': 'Clip',
@@ -6351,6 +6460,47 @@
       'toolbar.mixer': 'Konsol Mixer',
       'toolbar.auto_mix': 'Campur Otomatis',
       'toolbar.import_audio': 'Import Lagu',
+      'toolbar.clarity': 'Pembersih Suara',
+      'toolbar.voice': 'Pengubah Suara',
+      'quickstart.badge': 'Panduan Cepat Studio',
+      'quickstart.step1': '<strong>Masukkan Lagu:</strong> Drag & Drop atau klik tombol <em>Import Audio</em>',
+      'quickstart.step2': '<strong>Jernihkan / Ubah Suara:</strong> Pakai <em>Pembersih Suara</em> atau <em>Pengubah Suara</em>',
+      'quickstart.step3': '<strong>Putar Lagu:</strong> Tekan tombol <em>Play</em> atau tombol <em>Spasi</em>',
+      'clarity.modal_title': 'Pembersih Suara & Vokal Jernih',
+      'clarity.target_track': 'Terapkan Pada Track:',
+      'clarity.choose_preset': 'Pilih Mode Pembersih Suara:',
+      'clarity.preset_total_title': 'Pembersih Total & Anti-Mendem',
+      'clarity.preset_total_desc': 'Memotong dengung bas & frekuensi keruh, seketika vokal terdengar jernih bersih.',
+      'clarity.preset_mic_title': 'Studio Broadcast Mic',
+      'clarity.preset_mic_desc': 'Artikulasi vokal tebal, dekat & mewah standar rekaman siaran profesional.',
+      'clarity.preset_hiss_title': 'Anti-Noise & Desis Hiss',
+      'clarity.preset_hiss_desc': 'Meredam desis mikrofon (*hiss*) & suara hembusan angin latar belakang.',
+      'clarity.preset_crisp_title': 'Warm & Crisp Shimmer',
+      'clarity.preset_crisp_desc': 'Vokal renyah berkilau tanpa menusuk atau sakit di telinga pendengar.',
+      'clarity.intensity_label': 'Kekuatan Pembersihan Suara',
+      'clarity.btn_reset': 'Reset Normal',
+      'clarity.btn_apply': 'Terapkan Kejernihan 🔊',
+      'voice.modal_title': 'Tools Otomatis Pengubah Suara (Voice FX)',
+      'voice.target_track': 'Terapkan Pada Track:',
+      'voice.choose_preset': 'Pilih Karakter Efek Suara:',
+      'voice.preset_original_title': 'Suara Asli / Normal',
+      'voice.preset_original_desc': 'Kembalikan vokal ke nada alami tanpa modifikasi efek.',
+      'voice.preset_chipmunk_title': 'Chipmunk / Anime',
+      'voice.preset_chipmunk_desc': 'Suara imut, lincah, nada tinggi ala kartun animasi Jepang.',
+      'voice.preset_monster_title': 'Monster / Deep Bass',
+      'voice.preset_monster_desc': 'Suara berat, seram, berwibawa nada rendah ala trailer film.',
+      'voice.preset_telephone_title': 'Radio & Telepon Jadul',
+      'voice.preset_telephone_desc': 'Filter walkie-talkie / telepon jadul nuansa lo-fi retro.',
+      'voice.preset_robot_title': 'Robot Cyberpunk',
+      'voice.preset_robot_desc': 'Resonansi mekanik sci-fi futuristik ala kecerdasan buatan.',
+      'voice.preset_underwater_title': 'Dalam Air (Underwater)',
+      'voice.preset_underwater_desc': 'Suara terendam sayup-sayup redam di kedalaman air.',
+      'voice.preset_cathedral_title': 'Gema Katedral Megah',
+      'voice.preset_cathedral_desc': 'Pantulan reverb luas megah ala aula konser katedral.',
+      'voice.preset_crystal_title': 'Vokal Crystal Clear',
+      'voice.preset_crystal_desc': 'Artikulasi vokal jernih tajam berdiri tegak di depan mix.',
+      'voice.btn_bypass': 'Matikan Efek',
+      'voice.btn_apply': 'Terapkan Efek Suara 🔊',
       'mixer.console_title': 'KONSOL MIXER MULTI-SALURAN',
       'mixer.quick_preset_placeholder': 'Pilih Preset...',
       'inspector.tab_clip': 'Klip',
@@ -6420,6 +6570,10 @@
         if (elements.btnLangToggle) elements.btnLangToggle.title = 'Language: English (Click to switch to Bahasa Indonesia)';
       }
     }
+
+    if (typeof updateTrackEffectBadges === 'function') {
+      updateTrackEffectBadges();
+    }
   }
 
   function toggleLanguage() {
@@ -6434,6 +6588,314 @@
       elements.btnLangToggle.addEventListener('click', toggleLanguage);
     }
     setLanguage(state.language || 'id');
+  }
+
+  // --------------------------------------------------------------------------
+  // 21b. Audio Clarity & Voice Transformer Modules
+  // --------------------------------------------------------------------------
+  function applyTrackClarity(trackId, presetKey, intensity) {
+    if (!state.trackEffects) state.trackEffects = {};
+    if (!state.trackEffects[trackId]) {
+      state.trackEffects[trackId] = { clarity: null, voice: null, clarityIntensity: 80 };
+    }
+
+    state.trackEffects[trackId].clarity = presetKey;
+    state.trackEffects[trackId].clarityIntensity = intensity || 80;
+
+    ensureTrackAudioNodes();
+    const node = trackNodes[trackId];
+    if (node && audioCtx) {
+      const factor = (state.trackEffects[trackId].clarityIntensity) / 100;
+      const now = audioCtx.currentTime;
+
+      if (presetKey === 'clean_total') {
+        node.clarityLowCut.frequency.setValueAtTime(120, now);
+        node.clarityDeMud.frequency.setValueAtTime(400, now);
+        node.clarityDeMud.gain.setValueAtTime(-6.0 * factor, now);
+        node.clarityHighAir.frequency.setValueAtTime(9000, now);
+        node.clarityHighAir.gain.setValueAtTime(5.0 * factor, now);
+      } else if (presetKey === 'studio_mic') {
+        node.clarityLowCut.frequency.setValueAtTime(95, now);
+        node.clarityDeMud.frequency.setValueAtTime(350, now);
+        node.clarityDeMud.gain.setValueAtTime(-3.5 * factor, now);
+        node.clarityHighAir.frequency.setValueAtTime(8000, now);
+        node.clarityHighAir.gain.setValueAtTime(6.5 * factor, now);
+      } else if (presetKey === 'anti_hiss') {
+        node.clarityLowCut.frequency.setValueAtTime(110, now);
+        node.clarityDeMud.frequency.setValueAtTime(500, now);
+        node.clarityDeMud.gain.setValueAtTime(-2.0 * factor, now);
+        node.clarityHighAir.frequency.setValueAtTime(7000, now);
+        node.clarityHighAir.gain.setValueAtTime(-4.0 * factor, now);
+      } else if (presetKey === 'warm_crisp') {
+        node.clarityLowCut.frequency.setValueAtTime(80, now);
+        node.clarityDeMud.frequency.setValueAtTime(300, now);
+        node.clarityDeMud.gain.setValueAtTime(-4.0 * factor, now);
+        node.clarityHighAir.frequency.setValueAtTime(10000, now);
+        node.clarityHighAir.gain.setValueAtTime(4.0 * factor, now);
+      } else {
+        // Reset / Normal
+        node.clarityLowCut.frequency.setValueAtTime(20, now);
+        node.clarityDeMud.gain.setValueAtTime(0, now);
+        node.clarityHighAir.gain.setValueAtTime(0, now);
+      }
+    }
+
+    updateTrackEffectBadges();
+    pushHistorySnapshot(`Clarity FX: Track ${trackId} (${presetKey || 'Normal'})`);
+  }
+
+  function applyTrackVoice(trackId, presetKey) {
+    if (!state.trackEffects) state.trackEffects = {};
+    if (!state.trackEffects[trackId]) {
+      state.trackEffects[trackId] = { clarity: null, voice: null, clarityIntensity: 80 };
+    }
+
+    state.trackEffects[trackId].voice = (presetKey === 'original' || !presetKey) ? null : presetKey;
+
+    let rate = 1.0;
+    if (presetKey === 'chipmunk') rate = 1.35;
+    else if (presetKey === 'monster') rate = 0.80;
+
+    // Real-time update for currently active audio playback
+    const trkClips = state.clips.filter((c) => c.trackId === trackId);
+    trkClips.forEach((c) => {
+      const el = activeAudioElements[c.id];
+      if (el) {
+        try { el.playbackRate = rate; } catch (e) {}
+      }
+      const srcObj = activeAudioSources[c.id];
+      if (srcObj && srcObj.source && audioCtx) {
+        try { srcObj.source.playbackRate.setValueAtTime(rate, audioCtx.currentTime); } catch (e) {}
+      }
+    });
+
+    ensureTrackAudioNodes();
+    const node = trackNodes[trackId];
+    if (node && node.voiceFilter && audioCtx) {
+      const now = audioCtx.currentTime;
+      if (presetKey === 'telephone') {
+        node.voiceFilter.type = 'bandpass';
+        node.voiceFilter.frequency.setValueAtTime(1600, now);
+        node.voiceFilter.Q.setValueAtTime(2.5, now);
+      } else if (presetKey === 'robot') {
+        node.voiceFilter.type = 'peaking';
+        node.voiceFilter.frequency.setValueAtTime(2400, now);
+        node.voiceFilter.Q.setValueAtTime(6.0, now);
+        node.voiceFilter.gain.setValueAtTime(12.0, now);
+      } else if (presetKey === 'underwater') {
+        node.voiceFilter.type = 'lowpass';
+        node.voiceFilter.frequency.setValueAtTime(450, now);
+        node.voiceFilter.Q.setValueAtTime(2.0, now);
+      } else if (presetKey === 'cathedral') {
+        node.voiceFilter.type = 'highshelf';
+        node.voiceFilter.frequency.setValueAtTime(3500, now);
+        node.voiceFilter.gain.setValueAtTime(3.5, now);
+      } else if (presetKey === 'crystal') {
+        node.voiceFilter.type = 'highshelf';
+        node.voiceFilter.frequency.setValueAtTime(5000, now);
+        node.voiceFilter.gain.setValueAtTime(6.0, now);
+      } else {
+        node.voiceFilter.type = 'allpass';
+        node.voiceFilter.gain.setValueAtTime(0, now);
+      }
+    }
+
+    updateTrackEffectBadges();
+    pushHistorySnapshot(`Voice FX: Track ${trackId} (${presetKey || 'Normal'})`);
+  }
+
+  function updateTrackEffectBadges() {
+    const isId = (state.language || 'id') === 'id';
+    const clarityLabels = {
+      clean_total: isId ? '🧹 Bersih Total' : '🧹 Ultra Clean',
+      studio_mic: isId ? '🎙️ Studio Mic' : '🎙️ Studio Mic',
+      anti_hiss: isId ? '🔇 Anti-Hiss' : '🔇 Anti-Hiss',
+      warm_crisp: isId ? '✨ Warm Crisp' : '✨ Warm Crisp'
+    };
+
+    const voiceLabels = {
+      chipmunk: isId ? '🐿️ Chipmunk' : '🐿️ Chipmunk',
+      monster: isId ? '👹 Monster' : '👹 Monster',
+      telephone: isId ? '📞 Telepon' : '📞 Telephone',
+      robot: isId ? '🤖 Robot' : '🤖 Robot',
+      underwater: isId ? '🌊 Air' : '🌊 Underwater',
+      cathedral: isId ? '🏛️ Katedral' : '🏛️ Cathedral',
+      crystal: isId ? '💎 Crystal' : '💎 Crystal'
+    };
+
+    [1, 2, 3, 4].forEach((trackId) => {
+      const el = document.getElementById(`trackFxTag-${trackId}`);
+      if (!el) return;
+      el.innerHTML = '';
+
+      const fx = state.trackEffects && state.trackEffects[trackId];
+      if (!fx) return;
+
+      if (fx.clarity && clarityLabels[fx.clarity]) {
+        const pill = document.createElement('span');
+        pill.className = 'track-badge-pill';
+        pill.title = `Clarity: ${fx.clarity} (${fx.clarityIntensity || 80}%)`;
+        pill.textContent = clarityLabels[fx.clarity];
+        el.appendChild(pill);
+      }
+
+      if (fx.voice && voiceLabels[fx.voice]) {
+        const pill = document.createElement('span');
+        pill.className = 'track-badge-pill voice-fx';
+        pill.title = `Voice FX: ${fx.voice}`;
+        pill.textContent = voiceLabels[fx.voice];
+        el.appendChild(pill);
+      }
+    });
+  }
+
+  function initClarityAndVoiceModules() {
+    // 1. Quick Start Banner
+    if (elements.btnCloseQuickStart && elements.quickStartBanner) {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('suno_quickstart_dismissed') === 'true') {
+        elements.quickStartBanner.style.display = 'none';
+      }
+      elements.btnCloseQuickStart.addEventListener('click', () => {
+        elements.quickStartBanner.style.display = 'none';
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('suno_quickstart_dismissed', 'true');
+        }
+      });
+    }
+
+    // 2. Clarity Modal
+    let currentSelectedClarityPreset = 'clean_total';
+
+    function updateClarityModalUI(trackId) {
+      const fx = (state.trackEffects && state.trackEffects[trackId]) || {};
+      currentSelectedClarityPreset = fx.clarity || 'clean_total';
+      const intensity = fx.clarityIntensity || 80;
+      if (elements.clarityIntensitySlider) elements.clarityIntensitySlider.value = intensity;
+      if (elements.clarityIntensityVal) elements.clarityIntensityVal.textContent = intensity + '%';
+
+      if (elements.clarityPresetsGrid) {
+        elements.clarityPresetsGrid.querySelectorAll('.fx-preset-card').forEach((card) => {
+          card.classList.toggle('active', card.dataset.preset === currentSelectedClarityPreset);
+        });
+      }
+    }
+
+    if (elements.btnOpenClarityModal && elements.clarityModal) {
+      elements.btnOpenClarityModal.addEventListener('click', () => {
+        const initialTrackId = parseInt(state.selectedTrackId.replace('track-', '')) || 1;
+        if (elements.clarityTrackSelect) elements.clarityTrackSelect.value = initialTrackId;
+        updateClarityModalUI(initialTrackId);
+        openModal(elements.clarityModal);
+      });
+    }
+
+    if (elements.clarityTrackSelect) {
+      elements.clarityTrackSelect.addEventListener('change', (e) => {
+        updateClarityModalUI(parseInt(e.target.value) || 1);
+      });
+    }
+
+    if (elements.clarityPresetsGrid) {
+      elements.clarityPresetsGrid.querySelectorAll('.fx-preset-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          currentSelectedClarityPreset = card.dataset.preset;
+          elements.clarityPresetsGrid.querySelectorAll('.fx-preset-card').forEach((c) => c.classList.remove('active'));
+          card.classList.add('active');
+        });
+      });
+    }
+
+    if (elements.clarityIntensitySlider && elements.clarityIntensityVal) {
+      elements.clarityIntensitySlider.addEventListener('input', (e) => {
+        elements.clarityIntensityVal.textContent = e.target.value + '%';
+      });
+    }
+
+    if (elements.btnResetClarity) {
+      elements.btnResetClarity.addEventListener('click', () => {
+        const trackId = parseInt(elements.clarityTrackSelect ? elements.clarityTrackSelect.value : '1') || 1;
+        applyTrackClarity(trackId, null, 80);
+        closeModal(elements.clarityModal);
+        showToast(state.language === 'id' ? `Track 0${trackId}: Pembersih suara di-reset ke normal.` : `Track 0${trackId}: Audio clarity reset to normal.`);
+      });
+    }
+
+    if (elements.btnApplyClarity) {
+      elements.btnApplyClarity.addEventListener('click', () => {
+        const trackId = parseInt(elements.clarityTrackSelect ? elements.clarityTrackSelect.value : '1') || 1;
+        const intensity = parseInt(elements.clarityIntensitySlider ? elements.clarityIntensitySlider.value : '80') || 80;
+        applyTrackClarity(trackId, currentSelectedClarityPreset, intensity);
+        closeModal(elements.clarityModal);
+        showToast(state.language === 'id' ? `Track 0${trackId}: Pembersih suara aktif (${currentSelectedClarityPreset.toUpperCase()}) ✨` : `Track 0${trackId}: Audio clarity activated (${currentSelectedClarityPreset.toUpperCase()}) ✨`);
+      });
+    }
+
+    if (elements.btnCloseClarityModal) {
+      elements.btnCloseClarityModal.addEventListener('click', () => closeModal(elements.clarityModal));
+    }
+
+    // 3. Voice Modal
+    let currentSelectedVoicePreset = 'original';
+
+    function updateVoiceModalUI(trackId) {
+      const fx = (state.trackEffects && state.trackEffects[trackId]) || {};
+      currentSelectedVoicePreset = fx.voice || 'original';
+      if (elements.voicePresetsGrid) {
+        elements.voicePresetsGrid.querySelectorAll('.fx-preset-card').forEach((card) => {
+          card.classList.toggle('active', card.dataset.preset === currentSelectedVoicePreset);
+        });
+      }
+    }
+
+    if (elements.btnOpenVoiceModal && elements.voiceModal) {
+      elements.btnOpenVoiceModal.addEventListener('click', () => {
+        const initialTrackId = parseInt(state.selectedTrackId.replace('track-', '')) || 1;
+        if (elements.voiceTrackSelect) elements.voiceTrackSelect.value = initialTrackId;
+        updateVoiceModalUI(initialTrackId);
+        openModal(elements.voiceModal);
+      });
+    }
+
+    if (elements.voiceTrackSelect) {
+      elements.voiceTrackSelect.addEventListener('change', (e) => {
+        updateVoiceModalUI(parseInt(e.target.value) || 1);
+      });
+    }
+
+    if (elements.voicePresetsGrid) {
+      elements.voicePresetsGrid.querySelectorAll('.fx-preset-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          currentSelectedVoicePreset = card.dataset.preset;
+          elements.voicePresetsGrid.querySelectorAll('.fx-preset-card').forEach((c) => c.classList.remove('active'));
+          card.classList.add('active');
+        });
+      });
+    }
+
+    if (elements.btnBypassVoice) {
+      elements.btnBypassVoice.addEventListener('click', () => {
+        const trackId = parseInt(elements.voiceTrackSelect ? elements.voiceTrackSelect.value : '1') || 1;
+        applyTrackVoice(trackId, 'original');
+        closeModal(elements.voiceModal);
+        showToast(state.language === 'id' ? `Track 0${trackId}: Efek suara dinonaktifkan.` : `Track 0${trackId}: Voice FX disabled.`);
+      });
+    }
+
+    if (elements.btnApplyVoice) {
+      elements.btnApplyVoice.addEventListener('click', () => {
+        const trackId = parseInt(elements.voiceTrackSelect ? elements.voiceTrackSelect.value : '1') || 1;
+        applyTrackVoice(trackId, currentSelectedVoicePreset);
+        closeModal(elements.voiceModal);
+        showToast(state.language === 'id' ? `Track 0${trackId}: Efek pengubah suara aktif (${currentSelectedVoicePreset.toUpperCase()}) 🔊` : `Track 0${trackId}: Voice FX activated (${currentSelectedVoicePreset.toUpperCase()}) 🔊`);
+      });
+    }
+
+    if (elements.btnCloseVoiceModal) {
+      elements.btnCloseVoiceModal.addEventListener('click', () => closeModal(elements.voiceModal));
+    }
+
+    // Initial badge update
+    updateTrackEffectBadges();
   }
 
   // --------------------------------------------------------------------------
@@ -6454,6 +6916,7 @@
     initHistoryModule();
     initKeyboardShortcuts();
     initI18nModule();
+    initClarityAndVoiceModules();
 
     // Module Initializations
     initProjectModule();
