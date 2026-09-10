@@ -1808,9 +1808,10 @@
         const lib = getStoredLibrary();
         const s = lib.find((i) => i.id === btn.dataset.id);
         if (s) {
-          showToast(`Auditioning "${s.title}" (3s preview)`);
+          showToast(`Auditioning "${s.title}" (3s preview) 🔊`);
+          playAudioPreview(s.id, 3.5);
           startMeterSimulation();
-          setTimeout(stopMeterSimulation, 3000);
+          setTimeout(stopMeterSimulation, 3500);
         }
       });
     });
@@ -1832,20 +1833,27 @@
     const song = library.find((s) => s.id === songId);
     if (!song) return;
 
+    const audioBuf = AUDIO_BUFFERS[songId] || song.audioBuffer;
+    const clipDur = (audioBuf && audioBuf.duration) ? audioBuf.duration : (song.durationSec || 60.0);
+
     const newClip = {
       id: 'clip-' + Date.now(),
       trackId: 4,
       title: song.title,
       startSec: snapTime(state.currentTime || 0),
-      durationSec: song.durationSec || 60.0,
+      durationSec: clipDur,
       fadeInSec: 0.5,
       fadeOutSec: 1.0,
       color: 'amber',
       bpm: song.bpm || 128,
       key: song.key || 'A min',
       energy: song.energy || '80% (High)',
-      waveformSeed: 4
+      waveformSeed: 4,
+      audioBuffer: audioBuf
     };
+    if (audioBuf) {
+      AUDIO_BUFFERS[newClip.id] = audioBuf;
+    }
 
     ANALYSIS_PROFILES[newClip.id] = {
       title: song.title,
@@ -1893,6 +1901,32 @@
     if (!isAudio) {
       showToast('Unsupported audio format. Please upload MP3, WAV, or FLAC.');
       return;
+    }
+
+    state.pendingUploadFile = file;
+    state.pendingDecodedBuffer = null;
+
+    // Decode actual audio file in background
+    const ctx = getAudioContext();
+    if (ctx && file.arrayBuffer) {
+      file.arrayBuffer().then((ab) => {
+        ctx.decodeAudioData(ab.slice(0)).then((decoded) => {
+          state.pendingDecodedBuffer = decoded;
+          if (state.pendingUploadItem) {
+            state.pendingUploadItem.audioBuffer = decoded;
+            state.pendingUploadItem.durationSec = decoded.duration;
+            state.pendingUploadItem.duration = formatTime(decoded.duration);
+            AUDIO_BUFFERS[state.pendingUploadItem.id] = decoded;
+            if (elements.previewDuration) {
+              elements.previewDuration.textContent = formatTime(decoded.duration);
+            }
+          }
+        }).catch((err) => {
+          console.warn('Audio decoding failed:', err);
+        });
+      }).catch((err) => {
+        console.warn('File reading failed:', err);
+      });
     }
 
     if (elements.uploadDropzone) elements.uploadDropzone.style.display = 'none';
@@ -1945,26 +1979,34 @@
     const energyVal = 70 + Math.floor((fileName.length * 3) % 26);
     const energyLabel = energyVal > 80 ? `${energyVal}% (High)` : `${energyVal}% (Med)`;
 
+    const defaultDurationSec = (state.pendingDecodedBuffer && state.pendingDecodedBuffer.duration) ? state.pendingDecodedBuffer.duration : 155.0;
+    const defaultDurationStr = formatTime(defaultDurationSec);
+
     state.pendingUploadItem = {
       id: 'lib-' + Date.now(),
       title: cleanTitle,
       category: category,
       categoryLabel: capitalize(category),
       model: 'Suno v3.5',
-      duration: '02:35.00',
-      durationSec: 155.0,
+      duration: defaultDurationStr,
+      durationSec: defaultDurationSec,
       bpm: detectedBpm,
       key: detectedKey,
       energy: energyLabel,
       energyVal: energyVal,
       status: 'analyzed',
-      dateAdded: 'Just now'
+      dateAdded: 'Just now',
+      audioBuffer: state.pendingDecodedBuffer || null
     };
+
+    if (state.pendingDecodedBuffer) {
+      AUDIO_BUFFERS[state.pendingUploadItem.id] = state.pendingDecodedBuffer;
+    }
 
     if (elements.previewSongTitle) elements.previewSongTitle.textContent = cleanTitle;
     if (elements.previewBpm) elements.previewBpm.textContent = detectedBpm;
     if (elements.previewKey) elements.previewKey.textContent = detectedKey;
-    if (elements.previewDuration) elements.previewDuration.textContent = '02:35';
+    if (elements.previewDuration) elements.previewDuration.textContent = defaultDurationStr;
     if (elements.previewEnergy) elements.previewEnergy.textContent = energyLabel;
 
     if (elements.uploadMetaPreview) elements.uploadMetaPreview.style.display = 'flex';
@@ -2035,8 +2077,440 @@
   }
 
   function seekTo(targetSeconds) {
+    const wasPlaying = state.isPlaying;
+    if (wasPlaying) {
+      stopAudioPlayback();
+    }
     state.currentTime = Math.max(0, Math.min(state.totalDuration, targetSeconds));
     updatePlayheadPosition();
+    if (wasPlaying) {
+      startAudioPlayback();
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 13B. Real Web Audio Engine (Web Audio API & Synthesis DSP)
+  // --------------------------------------------------------------------------
+  let audioCtx = null;
+  const AUDIO_BUFFERS = {};
+  const activeAudioSources = {};
+  let trackNodes = {};
+  let masterGainNode = null;
+  let masterAnalyserNode = null;
+  let previewSourceNode = null;
+
+  function getAudioContext() {
+    if (!audioCtx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        audioCtx = new AudioCtx();
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  }
+
+  function ensureTrackAudioNodes() {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    if (!masterGainNode) {
+      masterGainNode = ctx.createGain();
+      masterAnalyserNode = ctx.createAnalyser();
+      masterAnalyserNode.fftSize = 256;
+      masterGainNode.connect(masterAnalyserNode);
+      masterAnalyserNode.connect(ctx.destination);
+      updateMasterAudioNode();
+    }
+
+    [1, 2, 3, 4].forEach((id) => {
+      if (!trackNodes[id]) {
+        const gainNode = ctx.createGain();
+        let panNode = null;
+        try {
+          if (ctx.createStereoPanner) {
+            panNode = ctx.createStereoPanner();
+          }
+        } catch (e) {}
+
+        const eqLow = ctx.createBiquadFilter();
+        eqLow.type = 'lowshelf';
+        eqLow.frequency.value = 250;
+
+        const eqMid = ctx.createBiquadFilter();
+        eqMid.type = 'peaking';
+        eqMid.frequency.value = 1000;
+        eqMid.Q.value = 1.0;
+
+        const eqHigh = ctx.createBiquadFilter();
+        eqHigh.type = 'highshelf';
+        eqHigh.frequency.value = 4000;
+
+        eqLow.connect(eqMid);
+        eqMid.connect(eqHigh);
+        eqHigh.connect(gainNode);
+
+        if (panNode) {
+          gainNode.connect(panNode);
+          panNode.connect(masterGainNode);
+        } else {
+          gainNode.connect(masterGainNode);
+        }
+
+        trackNodes[id] = {
+          eqLow,
+          eqMid,
+          eqHigh,
+          gain: gainNode,
+          pan: panNode
+        };
+
+        updateAudioTrackNode(id);
+      }
+    });
+  }
+
+  function updateAudioTrackNode(trackId) {
+    if (!audioCtx) return;
+    const nodes = trackNodes[trackId];
+    const trk = state.tracks[trackId];
+    if (!nodes || !trk) return;
+
+    const anySolo = Object.values(state.tracks).some((t) => t.solo);
+    let effectiveGain = 0;
+    if (anySolo) {
+      if (trk.solo && !trk.mute) {
+        effectiveGain = Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20);
+      } else {
+        effectiveGain = 0;
+      }
+    } else {
+      if (!trk.mute) {
+        effectiveGain = Math.pow(10, (trk.vol + (trk.gainTrim || 0)) / 20);
+      } else {
+        effectiveGain = 0;
+      }
+    }
+
+    try {
+      nodes.gain.gain.setTargetAtTime(effectiveGain, audioCtx.currentTime, 0.02);
+    } catch (e) {
+      nodes.gain.gain.value = effectiveGain;
+    }
+
+    if (nodes.pan && nodes.pan.pan) {
+      const p = Math.max(-1, Math.min(1, (trk.pan || 0) / 100));
+      try {
+        nodes.pan.pan.setTargetAtTime(p, audioCtx.currentTime, 0.02);
+      } catch (e) {
+        nodes.pan.pan.value = p;
+      }
+    }
+
+    if (trk.eq) {
+      try {
+        nodes.eqLow.gain.setTargetAtTime(trk.eq.low || 0, audioCtx.currentTime, 0.02);
+        nodes.eqMid.gain.setTargetAtTime(trk.eq.mid || 0, audioCtx.currentTime, 0.02);
+        nodes.eqHigh.gain.setTargetAtTime(trk.eq.high || 0, audioCtx.currentTime, 0.02);
+      } catch (e) {}
+    }
+  }
+
+  function updateMasterAudioNode() {
+    if (!audioCtx || !masterGainNode) return;
+    const masterVol = (state.mixer && state.mixer.master) ? state.mixer.master.vol : 0;
+    const g = Math.pow(10, masterVol / 20);
+    try {
+      masterGainNode.gain.setTargetAtTime(g, audioCtx.currentTime, 0.02);
+    } catch (e) {
+      masterGainNode.gain.value = g;
+    }
+  }
+
+  function generateProceduralDrumsBuffer(ctx, bpm) {
+    const sr = ctx.sampleRate || 44100;
+    const tempo = bpm || 128;
+    const beatSec = 60 / tempo;
+    const totalSec = beatSec * 16;
+    const length = Math.floor(sr * totalSec);
+    const buffer = ctx.createBuffer(2, length, sr);
+    const L = buffer.getChannelData(0);
+    const R = buffer.getChannelData(1);
+
+    for (let bar = 0; bar < 4; bar++) {
+      for (let beat = 0; beat < 4; beat++) {
+        const bIdx = bar * 4 + beat;
+        const bTime = bIdx * beatSec;
+        const startSamp = Math.floor(bTime * sr);
+
+        // Kick drum on every beat
+        const kickLen = Math.floor(0.22 * sr);
+        for (let i = 0; i < kickLen && (startSamp + i) < length; i++) {
+          const t = i / sr;
+          const freq = 135 * Math.exp(-t * 22) + 42;
+          const amp = Math.exp(-t * 9) * 0.75;
+          const s = Math.sin(2 * Math.PI * freq * t) * amp;
+          L[startSamp + i] += s;
+          R[startSamp + i] += s;
+        }
+
+        // Snare drum on beat 2 and 4
+        if (beat === 1 || beat === 3) {
+          const snareLen = Math.floor(0.25 * sr);
+          for (let i = 0; i < snareLen && (startSamp + i) < length; i++) {
+            const t = i / sr;
+            const noise = (Math.random() * 2 - 1) * Math.exp(-t * 16) * 0.35;
+            const tone = Math.sin(2 * Math.PI * 190 * t) * Math.exp(-t * 12) * 0.25;
+            L[startSamp + i] += (noise + tone);
+            R[startSamp + i] += (noise + tone);
+          }
+        }
+
+        // Hi-hat on 8th notes
+        [0, 0.5].forEach((sub) => {
+          const hhSamp = Math.floor((bTime + sub * beatSec) * sr);
+          const hhLen = Math.floor(0.06 * sr);
+          for (let i = 0; i < hhLen && (hhSamp + i) < length; i++) {
+            const t = i / sr;
+            const hh = (Math.random() * 2 - 1) * Math.exp(-t * 55) * 0.15;
+            L[hhSamp + i] += hh * 0.8;
+            R[hhSamp + i] += hh * 1.1;
+          }
+        });
+      }
+    }
+
+    let maxPeak = 0;
+    for (let i = 0; i < length; i++) {
+      const val = Math.abs(L[i]);
+      if (val > maxPeak) maxPeak = val;
+    }
+    if (maxPeak > 0.8) {
+      const norm = 0.75 / maxPeak;
+      for (let i = 0; i < length; i++) {
+        L[i] *= norm;
+        R[i] *= norm;
+      }
+    }
+    return buffer;
+  }
+
+  function generateProceduralBassBuffer(ctx, bpm) {
+    const sr = ctx.sampleRate || 44100;
+    const tempo = bpm || 128;
+    const beatSec = 60 / tempo;
+    const totalSec = beatSec * 16;
+    const length = Math.floor(sr * totalSec);
+    const buffer = ctx.createBuffer(2, length, sr);
+    const L = buffer.getChannelData(0);
+    const R = buffer.getChannelData(1);
+    const roots = [55.0, 43.65, 65.41, 48.99]; // A1, F1, C2, G1
+
+    for (let bar = 0; bar < 4; bar++) {
+      const rootFreq = roots[bar];
+      for (let step = 0; step < 8; step++) {
+        const tStart = (bar * 4 + step * 0.5) * beatSec;
+        const startSamp = Math.floor(tStart * sr);
+        const noteLen = Math.floor(0.42 * beatSec * sr);
+
+        for (let i = 0; i < noteLen && (startSamp + i) < length; i++) {
+          const t = i / sr;
+          const env = Math.sin(Math.PI * (i / noteLen)) * 0.45;
+          let saw = 0;
+          for (let h = 1; h <= 4; h++) {
+            saw += (Math.sin(2 * Math.PI * rootFreq * h * t) / h) * 0.3;
+          }
+          L[startSamp + i] += saw * env;
+          R[startSamp + i] += saw * env;
+        }
+      }
+    }
+    return buffer;
+  }
+
+  function generateProceduralLeadBuffer(ctx, bpm) {
+    const sr = ctx.sampleRate || 44100;
+    const tempo = bpm || 128;
+    const beatSec = 60 / tempo;
+    const totalSec = beatSec * 16;
+    const length = Math.floor(sr * totalSec);
+    const buffer = ctx.createBuffer(2, length, sr);
+    const L = buffer.getChannelData(0);
+    const R = buffer.getChannelData(1);
+
+    const melodyNotes = [
+      { bar: 0, beat: 0, dur: 1.5, f: 440.0 },
+      { bar: 0, beat: 1.5, dur: 0.5, f: 523.25 },
+      { bar: 0, beat: 2.0, dur: 1.0, f: 587.33 },
+      { bar: 0, beat: 3.0, dur: 1.0, f: 659.25 },
+      { bar: 1, beat: 0, dur: 2.0, f: 523.25 },
+      { bar: 1, beat: 2, dur: 2.0, f: 440.0 },
+      { bar: 2, beat: 0, dur: 1.5, f: 587.33 },
+      { bar: 2, beat: 1.5, dur: 0.5, f: 659.25 },
+      { bar: 2, beat: 2.0, dur: 1.0, f: 783.99 },
+      { bar: 2, beat: 3.0, dur: 1.0, f: 659.25 },
+      { bar: 3, beat: 0, dur: 3.0, f: 523.25 }
+    ];
+
+    melodyNotes.forEach((note) => {
+      const tStart = (note.bar * 4 + note.beat) * beatSec;
+      const startSamp = Math.floor(tStart * sr);
+      const noteLen = Math.floor(note.dur * beatSec * sr);
+
+      for (let i = 0; i < noteLen && (startSamp + i) < length; i++) {
+        const t = i / sr;
+        const env = (i < 0.05 * sr) ? (i / (0.05 * sr)) : Math.exp(-t * 2.2);
+        const vibrato = Math.sin(2 * Math.PI * 5.5 * t) * 6;
+        const s = Math.sin(2 * Math.PI * (note.f + vibrato) * t) * 0.28 +
+                  Math.sin(2 * Math.PI * (note.f * 2) * t) * 0.08;
+        L[startSamp + i] += s * env * 0.85;
+        R[startSamp + i] += s * env * 1.15;
+      }
+    });
+    return buffer;
+  }
+
+  function getClipAudioBuffer(clip) {
+    if (AUDIO_BUFFERS[clip.id]) {
+      return AUDIO_BUFFERS[clip.id];
+    }
+    if (clip.audioBuffer) {
+      AUDIO_BUFFERS[clip.id] = clip.audioBuffer;
+      return clip.audioBuffer;
+    }
+
+    const lib = getStoredLibrary();
+    const matchedSong = lib.find((s) => s.title === clip.title || s.id === clip.id);
+    if (matchedSong && AUDIO_BUFFERS[matchedSong.id]) {
+      AUDIO_BUFFERS[clip.id] = AUDIO_BUFFERS[matchedSong.id];
+      return AUDIO_BUFFERS[clip.id];
+    }
+
+    const ctx = getAudioContext();
+    if (!ctx) return null;
+
+    if (clip.trackId === 3 || (clip.title && clip.title.toLowerCase().includes('drum'))) {
+      AUDIO_BUFFERS[clip.id] = generateProceduralDrumsBuffer(ctx, clip.bpm || 128);
+    } else if (clip.trackId === 2 || (clip.title && (clip.title.toLowerCase().includes('bass') || clip.title.toLowerCase().includes('synth')))) {
+      AUDIO_BUFFERS[clip.id] = generateProceduralBassBuffer(ctx, clip.bpm || 128);
+    } else {
+      AUDIO_BUFFERS[clip.id] = generateProceduralLeadBuffer(ctx, clip.bpm || 128);
+    }
+
+    return AUDIO_BUFFERS[clip.id];
+  }
+
+  function startAudioPlayback() {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    ensureTrackAudioNodes();
+    stopAudioPlayback();
+
+    const now = ctx.currentTime;
+    const currentStudioTime = state.currentTime;
+
+    state.clips.forEach((clip) => {
+      const clipEnd = clip.startSec + clip.durationSec;
+      if (currentStudioTime >= clipEnd) return;
+
+      const buf = getClipAudioBuffer(clip);
+      if (!buf) return;
+
+      let when = now;
+      let offset = 0;
+      let duration = clip.durationSec;
+
+      if (currentStudioTime < clip.startSec) {
+        when = now + (clip.startSec - currentStudioTime);
+        offset = 0;
+        duration = clip.durationSec;
+      } else {
+        when = now;
+        offset = currentStudioTime - clip.startSec;
+        duration = clipEnd - currentStudioTime;
+      }
+
+      const bufOffset = offset % buf.duration;
+
+      try {
+        const source = ctx.createBufferSource();
+        source.buffer = buf;
+        if (buf.duration < clip.durationSec) {
+          source.loop = true;
+        }
+
+        const clipGain = ctx.createGain();
+        clipGain.gain.setValueAtTime(1.0, when);
+
+        const trackNode = trackNodes[clip.trackId];
+        if (trackNode) {
+          source.connect(clipGain);
+          clipGain.connect(trackNode.eqLow);
+        } else {
+          source.connect(clipGain);
+          clipGain.connect(masterGainNode);
+        }
+
+        source.start(when, bufOffset, duration);
+        activeAudioSources[clip.id] = { source, clipGain };
+      } catch (err) {
+        console.warn('Error starting audio source for clip:', clip.id, err);
+      }
+    });
+  }
+
+  function stopAudioPlayback() {
+    Object.keys(activeAudioSources).forEach((id) => {
+      const item = activeAudioSources[id];
+      if (item && item.source) {
+        try {
+          item.source.stop();
+          item.source.disconnect();
+        } catch (e) {}
+      }
+    });
+    for (const id in activeAudioSources) {
+      delete activeAudioSources[id];
+    }
+  }
+
+  function playAudioPreview(itemId, maxSec = 3.5) {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    stopAudioPreview();
+
+    let buf = AUDIO_BUFFERS[itemId];
+    if (!buf) {
+      buf = generateProceduralLeadBuffer(ctx, 128);
+    }
+
+    try {
+      previewSourceNode = ctx.createBufferSource();
+      previewSourceNode.buffer = buf;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.7, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + maxSec - 0.3);
+      gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + maxSec);
+
+      previewSourceNode.connect(gain);
+      gain.connect(ctx.destination);
+      previewSourceNode.start(0, 0, maxSec);
+      setTimeout(stopAudioPreview, maxSec * 1000);
+    } catch (e) {
+      console.warn('Preview playback error:', e);
+    }
+  }
+
+  function stopAudioPreview() {
+    if (previewSourceNode) {
+      try {
+        previewSourceNode.stop();
+        previewSourceNode.disconnect();
+      } catch (e) {}
+      previewSourceNode = null;
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -2051,6 +2525,11 @@
   }
 
   function startPlayback() {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
     state.isPlaying = true;
     lastTimestamp = performance.now();
     if (elements.btnPlayPause) elements.btnPlayPause.classList.add('active');
@@ -2061,9 +2540,10 @@
       `;
     }
 
+    startAudioPlayback();
     animationFrameId = requestAnimationFrame(playbackLoop);
     startMeterSimulation();
-    showToast('Playback started');
+    showToast(state.language === 'id' ? 'Pemutaran audio dimulai 🔊' : 'Audio playback started 🔊');
   }
 
   function pausePlayback() {
@@ -2079,13 +2559,14 @@
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
     }
+    stopAudioPlayback();
     stopMeterSimulation();
   }
 
   function stopPlayback() {
     pausePlayback();
     seekTo(0);
-    showToast('Playback stopped');
+    showToast(state.language === 'id' ? 'Pemutaran dihentikan' : 'Playback stopped');
   }
 
   function playbackLoop(timestamp) {
@@ -2099,6 +2580,10 @@
     if (state.currentTime >= state.totalDuration) {
       if (state.isLooping) {
         state.currentTime = 0;
+        if (state.isPlaying) {
+          stopAudioPlayback();
+          startAudioPlayback();
+        }
       } else {
         pausePlayback();
         state.currentTime = state.totalDuration;
@@ -3053,6 +3538,7 @@
     const consoleReadout = document.getElementById(`stripVolVal-${id}`);
     if (consoleReadout) consoleReadout.textContent = formatted;
 
+    updateAudioTrackNode(id);
     triggerAutosave();
   }
 
@@ -3085,6 +3571,7 @@
       if (elements.mixerPanVal) elements.mixerPanVal.textContent = formatted;
     }
 
+    updateAudioTrackNode(id);
     triggerAutosave();
   }
 
@@ -3107,6 +3594,7 @@
       if (elements.btnMixerMute) elements.btnMixerMute.classList.toggle('active', isMuted);
     }
 
+    updateAudioTrackNode(id);
     showToast(`Track ${id} ${isMuted ? 'Muted' : 'Unmuted'}`);
     triggerAutosave();
   }
@@ -3130,6 +3618,7 @@
       if (elements.btnMixerSolo) elements.btnMixerSolo.classList.toggle('active', isSolo);
     }
 
+    [1, 2, 3, 4].forEach((tId) => updateAudioTrackNode(tId));
     showToast(`Track ${id} ${isSolo ? 'Soloed' : 'Unsoloed'}`);
     triggerAutosave();
   }
@@ -3476,6 +3965,7 @@
           if (readout) readout.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)} dB`;
           if (elements.masterVolumeSlider) elements.masterVolumeSlider.value = val;
           if (elements.masterDbReadout) elements.masterDbReadout.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)} dB`;
+          updateMasterAudioNode();
           triggerAutosave();
         } else {
           syncTrackVolume(trackId, val, 'console');
@@ -3562,6 +4052,7 @@
         if (stripVol) stripVol.value = val;
         const stripReadout = document.getElementById('stripVolVal-master');
         if (stripReadout) stripReadout.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)} dB`;
+        updateMasterAudioNode();
         triggerAutosave();
       });
     }
@@ -3615,6 +4106,7 @@
           if (elements.mixerGainTrimVal) {
             elements.mixerGainTrimVal.textContent = val > 0 ? `+${val.toFixed(1)} dB` : `${val.toFixed(1)} dB`;
           }
+          updateAudioTrackNode(trackId);
           triggerAutosave();
         }
       });
@@ -3651,6 +4143,7 @@
       if (elements.eqMidGainVal) elements.eqMidGainVal.textContent = `${mid > 0 ? '+' : ''}${mid.toFixed(1)} dB`;
       if (elements.eqHighGainVal) elements.eqHighGainVal.textContent = `${high > 0 ? '+' : ''}${high.toFixed(1)} dB`;
       renderEqCurve(trackId);
+      updateAudioTrackNode(trackId);
       triggerAutosave();
     };
 
