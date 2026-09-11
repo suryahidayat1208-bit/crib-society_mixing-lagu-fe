@@ -6,7 +6,7 @@
   <title>Suno Music Mixing Studio</title>
   <meta name="description" content="Browser-based dark futuristic music mixing studio for Suno AI generated songs and stems.">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
-  <link rel="stylesheet" href="styles.css?v=2.3.0">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div class="app-shell" id="app">
@@ -3083,7 +3083,7 @@
             </div>
             <div>
               <span style="color: var(--text-muted);">Base Latency: </span>
-              <strong id="readoutBaseLatency" class="tabular-nums" style="color: var(--text-main);">< 10 ms</strong>
+              <strong id="readoutBaseLatency" class="tabular-nums" style="color: var(--text-main);">&lt; 10 ms</strong>
             </div>
             <div>
               <span style="color: var(--text-muted);">Output Channel: </span>
@@ -3155,6 +3155,6 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Studio JavaScript Engine -->
-  <script src="app.js?v=2.7.0"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

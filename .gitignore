@@ -8,8 +8,10 @@ Desktop.ini
 npm-debug.log*
 yarn-debug.log*
 
-# Node modules (if any)
+# Build output & dependencies
 node_modules/
+dist/
+.vercel/
 
 # IDE / Editor
 .vscode/

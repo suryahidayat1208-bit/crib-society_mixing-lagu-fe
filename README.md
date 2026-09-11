@@ -28,23 +28,30 @@
 
 No installation or build steps are required. You can launch the studio using any of the following methods:
 
-### Method A: Direct Browser Launch (Fastest)
-Simply double-click [`index.html`](file:///c:/laragon/www/Crib_Society_Mixing%20lagu/index.html) or right-click and choose **Open With** -> **Google Chrome**, **Microsoft Edge**, **Mozilla Firefox**, **Brave**, or **Safari**.
+### Method A: Vite Development Server (Recommended)
+```bash
+# Install dependencies
+npm install
 
-### Method B: Local Web Server (Recommended for Audio Blobs & File API)
-Run any lightweight HTTP server from the project directory:
+# Start Vite live development server
+npm run dev
 
+# Build production bundle to dist/
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Method B: Direct Browser Launch or Local Static Server
+You can also launch directly or run any static HTTP server:
 ```bash
 # Using Python 3
 python -m http.server 8000
 
-# Using Node.js (npx)
-npx serve .
-
 # Using PHP (Laragon / XAMPP / Native)
 php -S localhost:8000
 ```
-Then navigate to `http://localhost:8000` in your web browser.
 
 ---
 
