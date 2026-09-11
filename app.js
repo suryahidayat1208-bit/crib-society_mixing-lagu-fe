@@ -352,11 +352,11 @@
     activeTool: 'select',
     snapSetting: 'quarter_beat',
     isLooping: false,
-    selectedTrackId: 'track-1',
+    selectedTrackId: 'track-all',
     selectedClipId: 'clip-1',
     activeAnalysisProfile: ANALYSIS_PROFILES['clip-1'],
     inspectorCollapsed: false,
-    activeInspectorTab: 'clip',
+    activeInspectorTab: 'allinone',
     lastAutosaveTime: Date.now(),
     libraryFilter: 'all',
     librarySearch: '',
@@ -365,6 +365,20 @@
     pendingDeleteProjId: null,
     pendingRenameProjId: null,
     isReanalyzing: false,
+    studioMode: {
+      enabled: false,
+      preset: 'studio-master',
+      clarity: 3.5,
+      deMud: -4.0,
+      air: 4.0,
+      warmth: 1.5
+    },
+    allInOneStems: {
+      vocal: { vol: 0.0, clarity: 2.0, mute: false, solo: false },
+      bass: { vol: 0.0, punch: 2.5, mute: false, solo: false },
+      drum: { vol: -1.0, punch: 60, mute: false, solo: false },
+      fx: { vol: 0.0, reverb: 40, mute: false, solo: false }
+    },
     trackEffects: {
       1: { clarity: null, voice: null, clarityIntensity: 80 },
       2: { clarity: null, voice: null, clarityIntensity: 80 },
@@ -624,6 +638,59 @@
     btnBypassVoice: document.getElementById('btnBypassVoice'),
     btnApplyVoice: document.getElementById('btnApplyVoice'),
 
+    // Mode Studio & All-In-One Elements
+    btnToggleStudioMode: document.getElementById('btnToggleStudioMode'),
+    studioModeBadge: document.getElementById('studioModeBadge'),
+    btnOpenStudioModeModal: document.getElementById('btnOpenStudioModeModal'),
+    allinoneStudioBadge: document.getElementById('allinoneStudioBadge'),
+    trackRowAllInOne: document.getElementById('trackRowAllInOne'),
+    pillStemVocal: document.getElementById('pillStemVocal'),
+    pillStemBass: document.getElementById('pillStemBass'),
+    pillStemDrum: document.getElementById('pillStemDrum'),
+    pillStemFx: document.getElementById('pillStemFx'),
+    studioModeModal: document.getElementById('studioModeModal'),
+    btnCloseStudioModeModal: document.getElementById('btnCloseStudioModeModal'),
+    btnCancelStudioMode: document.getElementById('btnCancelStudioMode'),
+    btnApplyStudioMode: document.getElementById('btnApplyStudioMode'),
+    btnBypassStudioMode: document.getElementById('btnBypassStudioMode'),
+    modalStudioStatusBadge: document.getElementById('modalStudioStatusBadge'),
+    studioPresetGrid: document.getElementById('studioPresetGrid'),
+    sliderStudioClarity: document.getElementById('sliderStudioClarity'),
+    readoutStudioClarity: document.getElementById('readoutStudioClarity'),
+    sliderStudioDeMud: document.getElementById('sliderStudioDeMud'),
+    readoutStudioDeMud: document.getElementById('readoutStudioDeMud'),
+    sliderStudioAir: document.getElementById('sliderStudioAir'),
+    readoutStudioAir: document.getElementById('readoutStudioAir'),
+    sliderStudioWarmth: document.getElementById('sliderStudioWarmth'),
+    readoutStudioWarmth: document.getElementById('readoutStudioWarmth'),
+    btnAllInOneOpenStudio: document.getElementById('btnAllInOneOpenStudio'),
+    btnAllInOneReset: document.getElementById('btnAllInOneReset'),
+    btnAllInOneDownload: document.getElementById('btnAllInOneDownload'),
+    sliderStemVocalVol: document.getElementById('sliderStemVocalVol'),
+    readoutStemVocalVol: document.getElementById('readoutStemVocalVol'),
+    sliderStemVocalClarity: document.getElementById('sliderStemVocalClarity'),
+    readoutStemVocalClarity: document.getElementById('readoutStemVocalClarity'),
+    btnStemVocalMute: document.getElementById('btnStemVocalMute'),
+    btnStemVocalSolo: document.getElementById('btnStemVocalSolo'),
+    sliderStemBassVol: document.getElementById('sliderStemBassVol'),
+    readoutStemBassVol: document.getElementById('readoutStemBassVol'),
+    sliderStemBassPunch: document.getElementById('sliderStemBassPunch'),
+    readoutStemBassPunch: document.getElementById('readoutStemBassPunch'),
+    btnStemBassMute: document.getElementById('btnStemBassMute'),
+    btnStemBassSolo: document.getElementById('btnStemBassSolo'),
+    sliderStemDrumVol: document.getElementById('sliderStemDrumVol'),
+    readoutStemDrumVol: document.getElementById('readoutStemDrumVol'),
+    sliderStemDrumPunch: document.getElementById('sliderStemDrumPunch'),
+    readoutStemDrumPunch: document.getElementById('readoutStemDrumPunch'),
+    btnStemDrumMute: document.getElementById('btnStemDrumMute'),
+    btnStemDrumSolo: document.getElementById('btnStemDrumSolo'),
+    sliderStemFxVol: document.getElementById('sliderStemFxVol'),
+    readoutStemFxVol: document.getElementById('readoutStemFxVol'),
+    sliderStemFxReverb: document.getElementById('sliderStemFxReverb'),
+    readoutStemFxReverb: document.getElementById('readoutStemFxReverb'),
+    btnStemFxMute: document.getElementById('btnStemFxMute'),
+    btnStemFxSolo: document.getElementById('btnStemFxSolo'),
+
     // Phase 5 Mixer Console & Channel Strip Elements
     btnToggleMixerDock: document.getElementById('btnToggleMixerDock'),
     btnToggleMixerConsole: document.getElementById('btnToggleMixerConsole'),
@@ -709,6 +776,7 @@
     btnToggleInspector: document.getElementById('btnToggleInspector'),
     tabBtns: document.querySelectorAll('.tab-btn'),
     tabPanes: {
+      allinone: document.getElementById('paneAllInOne'),
       clip: document.getElementById('paneClip'),
       mixer: document.getElementById('paneMixer'),
       ai: document.getElementById('paneAi')
@@ -2343,6 +2411,13 @@
   let trackNodes = {};
   let masterGainNode = null;
   let masterAnalyserNode = null;
+  let studioMasterNodes = {
+    deRumble: null,
+    deMud: null,
+    presence: null,
+    air: null,
+    warmth: null
+  };
   let previewSourceNode = null;
   let previewAudioElement = null;
 
@@ -2380,8 +2455,51 @@
       masterGainNode = ctx.createGain();
       masterAnalyserNode = ctx.createAnalyser();
       masterAnalyserNode.fftSize = 256;
-      masterGainNode.connect(masterAnalyserNode);
+
+      // Mode Studio Mastering Audio Chain
+      const isStudioEnabled = !!(state.studioMode && state.studioMode.enabled);
+      const studioDeRumble = ctx.createBiquadFilter();
+      studioDeRumble.type = 'highpass';
+      studioDeRumble.frequency.value = isStudioEnabled ? 35 : 10;
+
+      const studioDeMud = ctx.createBiquadFilter();
+      studioDeMud.type = 'peaking';
+      studioDeMud.frequency.value = 300;
+      studioDeMud.Q.value = 1.4;
+      studioDeMud.gain.value = isStudioEnabled ? (state.studioMode.deMud !== undefined ? state.studioMode.deMud : -4.0) : 0;
+
+      const studioPresence = ctx.createBiquadFilter();
+      studioPresence.type = 'peaking';
+      studioPresence.frequency.value = 2800;
+      studioPresence.Q.value = 1.0;
+      studioPresence.gain.value = isStudioEnabled ? (state.studioMode.clarity !== undefined ? state.studioMode.clarity : 3.5) : 0;
+
+      const studioAir = ctx.createBiquadFilter();
+      studioAir.type = 'highshelf';
+      studioAir.frequency.value = 10500;
+      studioAir.gain.value = isStudioEnabled ? (state.studioMode.air !== undefined ? state.studioMode.air : 4.0) : 0;
+
+      const studioWarmth = ctx.createBiquadFilter();
+      studioWarmth.type = 'lowshelf';
+      studioWarmth.frequency.value = 100;
+      studioWarmth.gain.value = isStudioEnabled ? (state.studioMode.warmth !== undefined ? state.studioMode.warmth : 1.5) : 0;
+
+      masterGainNode.connect(studioDeRumble);
+      studioDeRumble.connect(studioDeMud);
+      studioDeMud.connect(studioPresence);
+      studioPresence.connect(studioAir);
+      studioAir.connect(studioWarmth);
+      studioWarmth.connect(masterAnalyserNode);
       masterAnalyserNode.connect(ctx.destination);
+
+      studioMasterNodes = {
+        deRumble: studioDeRumble,
+        deMud: studioDeMud,
+        presence: studioPresence,
+        air: studioAir,
+        warmth: studioWarmth
+      };
+
       updateMasterAudioNode();
     }
 
@@ -2540,6 +2658,31 @@
         }
       }
     });
+  }
+
+  function updateStudioModeDsp() {
+    if (!audioCtx || !studioMasterNodes.deRumble) return;
+    const isStudioEnabled = !!(state.studioMode && state.studioMode.enabled);
+    const deMudGain = isStudioEnabled ? (state.studioMode.deMud !== undefined ? state.studioMode.deMud : -4.0) : 0;
+    const presenceGain = isStudioEnabled ? (state.studioMode.clarity !== undefined ? state.studioMode.clarity : 3.5) : 0;
+    const airGain = isStudioEnabled ? (state.studioMode.air !== undefined ? state.studioMode.air : 4.0) : 0;
+    const warmthGain = isStudioEnabled ? (state.studioMode.warmth !== undefined ? state.studioMode.warmth : 1.5) : 0;
+    const rumbleFreq = isStudioEnabled ? 35 : 10;
+
+    const t = audioCtx.currentTime;
+    try {
+      studioMasterNodes.deRumble.frequency.setTargetAtTime(rumbleFreq, t, 0.02);
+      studioMasterNodes.deMud.gain.setTargetAtTime(deMudGain, t, 0.02);
+      studioMasterNodes.presence.gain.setTargetAtTime(presenceGain, t, 0.02);
+      studioMasterNodes.air.gain.setTargetAtTime(airGain, t, 0.02);
+      studioMasterNodes.warmth.gain.setTargetAtTime(warmthGain, t, 0.02);
+    } catch (e) {
+      studioMasterNodes.deRumble.frequency.value = rumbleFreq;
+      studioMasterNodes.deMud.gain.value = deMudGain;
+      studioMasterNodes.presence.gain.value = presenceGain;
+      studioMasterNodes.air.gain.value = airGain;
+      studioMasterNodes.warmth.gain.value = warmthGain;
+    }
   }
 
   function generateProceduralDrumsBuffer(ctx, bpm) {
@@ -4036,6 +4179,23 @@
     const consoleReadout = document.getElementById(`stripVolVal-${id}`);
     if (consoleReadout) consoleReadout.textContent = formatted;
 
+    // All-In-One Stem Deck Sync
+    if (source !== 'allinone') {
+      if (id === 1 && elements.sliderStemVocalVol) {
+        elements.sliderStemVocalVol.value = val;
+        if (elements.readoutStemVocalVol) elements.readoutStemVocalVol.textContent = formatted;
+      } else if (id === 2 && elements.sliderStemBassVol) {
+        elements.sliderStemBassVol.value = val;
+        if (elements.readoutStemBassVol) elements.readoutStemBassVol.textContent = formatted;
+      } else if (id === 3 && elements.sliderStemDrumVol) {
+        elements.sliderStemDrumVol.value = val;
+        if (elements.readoutStemDrumVol) elements.readoutStemDrumVol.textContent = formatted;
+      } else if (id === 4 && elements.sliderStemFxVol) {
+        elements.sliderStemFxVol.value = val;
+        if (elements.readoutStemFxVol) elements.readoutStemFxVol.textContent = formatted;
+      }
+    }
+
     updateAudioTrackNode(id);
     triggerAutosave();
   }
@@ -4087,6 +4247,10 @@
     const stripBtn = document.getElementById(`stripMute-${id}`);
     if (stripBtn) stripBtn.classList.toggle('active', isMuted);
 
+    // All-In-One Stem Deck
+    const stemMuteBtn = id === 1 ? elements.btnStemVocalMute : (id === 2 ? elements.btnStemBassMute : (id === 3 ? elements.btnStemDrumMute : elements.btnStemFxMute));
+    if (stemMuteBtn) stemMuteBtn.classList.toggle('active', isMuted);
+
     // Inspector Channel Header (if active track)
     if (state.mixer.selectedTrackId === id) {
       if (elements.btnMixerMute) elements.btnMixerMute.classList.toggle('active', isMuted);
@@ -4111,6 +4275,10 @@
     const stripBtn = document.getElementById(`stripSolo-${id}`);
     if (stripBtn) stripBtn.classList.toggle('active', isSolo);
 
+    // All-In-One Stem Deck
+    const stemSoloBtn = id === 1 ? elements.btnStemVocalSolo : (id === 2 ? elements.btnStemBassSolo : (id === 3 ? elements.btnStemDrumSolo : elements.btnStemFxSolo));
+    if (stemSoloBtn) stemSoloBtn.classList.toggle('active', isSolo);
+
     // Inspector Channel Header (if active track)
     if (state.mixer.selectedTrackId === id) {
       if (elements.btnMixerSolo) elements.btnMixerSolo.classList.toggle('active', isSolo);
@@ -4121,7 +4289,121 @@
     triggerAutosave();
   }
 
+  function syncAllInOneControlsFromState() {
+    // Vocal (Track 1)
+    if (elements.sliderStemVocalVol && state.tracks[1]) {
+      elements.sliderStemVocalVol.value = state.tracks[1].vol;
+      if (elements.readoutStemVocalVol) {
+        elements.readoutStemVocalVol.textContent = (state.tracks[1].vol >= 0 ? '+' : '') + state.tracks[1].vol.toFixed(1) + ' dB';
+      }
+    }
+    if (elements.btnStemVocalMute && state.tracks[1]) {
+      elements.btnStemVocalMute.classList.toggle('active', state.tracks[1].mute);
+    }
+    if (elements.btnStemVocalSolo && state.tracks[1]) {
+      elements.btnStemVocalSolo.classList.toggle('active', state.tracks[1].solo);
+    }
+    if (elements.sliderStemVocalClarity && state.allInOneStems && state.allInOneStems.vocal) {
+      elements.sliderStemVocalClarity.value = state.allInOneStems.vocal.clarity;
+      if (elements.readoutStemVocalClarity) {
+        elements.readoutStemVocalClarity.textContent = (state.allInOneStems.vocal.clarity >= 0 ? '+' : '') + state.allInOneStems.vocal.clarity.toFixed(1) + ' dB';
+      }
+    }
+
+    // Bass (Track 2)
+    if (elements.sliderStemBassVol && state.tracks[2]) {
+      elements.sliderStemBassVol.value = state.tracks[2].vol;
+      if (elements.readoutStemBassVol) {
+        elements.readoutStemBassVol.textContent = (state.tracks[2].vol >= 0 ? '+' : '') + state.tracks[2].vol.toFixed(1) + ' dB';
+      }
+    }
+    if (elements.btnStemBassMute && state.tracks[2]) {
+      elements.btnStemBassMute.classList.toggle('active', state.tracks[2].mute);
+    }
+    if (elements.btnStemBassSolo && state.tracks[2]) {
+      elements.btnStemBassSolo.classList.toggle('active', state.tracks[2].solo);
+    }
+    if (elements.sliderStemBassPunch && state.allInOneStems && state.allInOneStems.bass) {
+      elements.sliderStemBassPunch.value = state.allInOneStems.bass.punch;
+      if (elements.readoutStemBassPunch) {
+        elements.readoutStemBassPunch.textContent = (state.allInOneStems.bass.punch >= 0 ? '+' : '') + state.allInOneStems.bass.punch.toFixed(1) + ' dB';
+      }
+    }
+
+    // Drum (Track 3)
+    if (elements.sliderStemDrumVol && state.tracks[3]) {
+      elements.sliderStemDrumVol.value = state.tracks[3].vol;
+      if (elements.readoutStemDrumVol) {
+        elements.readoutStemDrumVol.textContent = (state.tracks[3].vol >= 0 ? '+' : '') + state.tracks[3].vol.toFixed(1) + ' dB';
+      }
+    }
+    if (elements.btnStemDrumMute && state.tracks[3]) {
+      elements.btnStemDrumMute.classList.toggle('active', state.tracks[3].mute);
+    }
+    if (elements.btnStemDrumSolo && state.tracks[3]) {
+      elements.btnStemDrumSolo.classList.toggle('active', state.tracks[3].solo);
+    }
+    if (elements.sliderStemDrumPunch && state.allInOneStems && state.allInOneStems.drum) {
+      elements.sliderStemDrumPunch.value = state.allInOneStems.drum.punch;
+      if (elements.readoutStemDrumPunch) {
+        elements.readoutStemDrumPunch.textContent = state.allInOneStems.drum.punch + '%';
+      }
+    }
+
+    // FX (Track 4)
+    if (elements.sliderStemFxVol && state.tracks[4]) {
+      elements.sliderStemFxVol.value = state.tracks[4].vol;
+      if (elements.readoutStemFxVol) {
+        elements.readoutStemFxVol.textContent = (state.tracks[4].vol >= 0 ? '+' : '') + state.tracks[4].vol.toFixed(1) + ' dB';
+      }
+    }
+    if (elements.btnStemFxMute && state.tracks[4]) {
+      elements.btnStemFxMute.classList.toggle('active', state.tracks[4].mute);
+    }
+    if (elements.btnStemFxSolo && state.tracks[4]) {
+      elements.btnStemFxSolo.classList.toggle('active', state.tracks[4].solo);
+    }
+    if (elements.sliderStemFxReverb && state.allInOneStems && state.allInOneStems.fx) {
+      elements.sliderStemFxReverb.value = state.allInOneStems.fx.reverb;
+      if (elements.readoutStemFxReverb) {
+        elements.readoutStemFxReverb.textContent = state.allInOneStems.fx.reverb + '%';
+      }
+    }
+  }
+
   function selectStudioTrack(trackId, options = {}) {
+    if (trackId === 'all' || trackId === 'track-all') {
+      state.selectedTrackId = 'track-all';
+
+      // 1. Highlight All-In-One track row and deselect individual track rows
+      document.querySelectorAll('.track-row').forEach((row) => {
+        row.classList.toggle('selected', row.id === 'trackRowAllInOne' || row.dataset.trackId === 'track-all');
+      });
+
+      // 2. Clear individual mixer strip selection
+      document.querySelectorAll('.mixer-strip').forEach((strip) => {
+        strip.classList.remove('selected');
+      });
+
+      // 3. Switch Inspector Tab to All-In-One
+      if (elements.tabPanes && elements.tabPanes.allinone) {
+        state.activeInspectorTab = 'allinone';
+        elements.tabBtns.forEach((b) => {
+          const isTarget = b.dataset.tab === 'allinone';
+          b.classList.toggle('active', isTarget);
+          b.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+        });
+        Object.keys(elements.tabPanes).forEach((key) => {
+          if (elements.tabPanes[key]) {
+            elements.tabPanes[key].style.display = key === 'allinone' ? 'flex' : 'none';
+          }
+        });
+      }
+
+      syncAllInOneControlsFromState();
+      return;
+    }
+
     let id = typeof trackId === 'string' ? parseInt(trackId.replace('track-', ''), 10) : Number(trackId);
     if (isNaN(id) || !state.tracks[id]) id = 1;
 
@@ -4158,6 +4440,9 @@
       elements.mixerTrackSelector.value = String(id);
     }
     updateMixerUI(id);
+
+    // Also keep All-In-One stem cards updated in case the tab is open
+    syncAllInOneControlsFromState();
 
     // 5. If options.syncClip is not false, select the track's clip to populate Clip Inspector & Waveform Analysis
     if (options.syncClip !== false) {
@@ -6052,7 +6337,43 @@
     limiter.attack.value = 0.002;
     limiter.release.value = 0.05;
 
-    masterGain.connect(limiter);
+    let masterChainOut = masterGain;
+    if (state.studioMode && state.studioMode.enabled) {
+      const offDeRumble = offlineCtx.createBiquadFilter();
+      offDeRumble.type = 'highpass';
+      offDeRumble.frequency.value = 35;
+
+      const offDeMud = offlineCtx.createBiquadFilter();
+      offDeMud.type = 'peaking';
+      offDeMud.frequency.value = 300;
+      offDeMud.Q.value = 1.4;
+      offDeMud.gain.value = state.studioMode.deMud !== undefined ? state.studioMode.deMud : -4.0;
+
+      const offPresence = offlineCtx.createBiquadFilter();
+      offPresence.type = 'peaking';
+      offPresence.frequency.value = 2800;
+      offPresence.Q.value = 1.0;
+      offPresence.gain.value = state.studioMode.clarity !== undefined ? state.studioMode.clarity : 3.5;
+
+      const offAir = offlineCtx.createBiquadFilter();
+      offAir.type = 'highshelf';
+      offAir.frequency.value = 10500;
+      offAir.gain.value = state.studioMode.air !== undefined ? state.studioMode.air : 4.0;
+
+      const offWarmth = offlineCtx.createBiquadFilter();
+      offWarmth.type = 'lowshelf';
+      offWarmth.frequency.value = 100;
+      offWarmth.gain.value = state.studioMode.warmth !== undefined ? state.studioMode.warmth : 1.5;
+
+      masterChainOut.connect(offDeRumble);
+      offDeRumble.connect(offDeMud);
+      offDeMud.connect(offPresence);
+      offPresence.connect(offAir);
+      offAir.connect(offWarmth);
+      masterChainOut = offWarmth;
+    }
+
+    masterChainOut.connect(limiter);
     limiter.connect(offlineCtx.destination);
 
     // Setup Track Offline Nodes
@@ -7410,6 +7731,422 @@
   }
 
   // --------------------------------------------------------------------------
+  // 21B. All-In-One Stem Suite & Mode Studio Module (Phase 10)
+  // --------------------------------------------------------------------------
+  const STUDIO_PRESETS = {
+    'studio-master': { name: 'Studio Master Pro', clarity: 3.5, deMud: -4.0, air: 4.0, warmth: 1.5 },
+    'vocal-polish': { name: 'Vocal Polish Studio', clarity: 5.5, deMud: -3.5, air: 5.0, warmth: 0.5 },
+    'acoustic-air': { name: 'Acoustic Air & Space', clarity: 2.0, deMud: -2.5, air: 6.5, warmth: 2.0 },
+    'deep-denoise': { name: 'Deep Denoise & Clean', clarity: 3.0, deMud: -7.0, air: 2.5, warmth: 0.0 },
+    'warm-punch': { name: 'Warm Punch & Body', clarity: 2.5, deMud: -3.0, air: 3.0, warmth: 3.5 }
+  };
+
+  let currentStudioPresetKey = 'studio-master';
+
+  function updateStudioModeUI() {
+    const isEnabled = !!(state.studioMode && state.studioMode.enabled);
+
+    // Toolbar badge
+    if (elements.studioModeBadge) {
+      elements.studioModeBadge.textContent = isEnabled ? 'ON' : 'OFF';
+      elements.studioModeBadge.classList.toggle('active', isEnabled);
+    }
+    if (elements.btnToggleStudioMode) {
+      elements.btnToggleStudioMode.classList.toggle('active', isEnabled);
+    }
+
+    // All-in-one track row badge
+    if (elements.allinoneStudioBadge) {
+      elements.allinoneStudioBadge.textContent = isEnabled ? '🎧 MODE STUDIO (ON)' : '🎧 MODE STUDIO';
+      elements.allinoneStudioBadge.classList.toggle('active', isEnabled);
+    }
+
+    // Modal status badge
+    if (elements.modalStudioStatusBadge) {
+      elements.modalStudioStatusBadge.textContent = isEnabled ? 'AKTIF' : 'STANDBY';
+      elements.modalStudioStatusBadge.classList.toggle('active', isEnabled);
+    }
+
+    // Active preset card in modal
+    if (elements.studioPresetGrid) {
+      elements.studioPresetGrid.querySelectorAll('.studio-preset-card').forEach((card) => {
+        card.classList.toggle('active', card.dataset.preset === currentStudioPresetKey);
+      });
+    }
+
+    // Sliders
+    if (elements.sliderStudioClarity && state.studioMode) {
+      elements.sliderStudioClarity.value = state.studioMode.clarity !== undefined ? state.studioMode.clarity : 3.5;
+      if (elements.readoutStudioClarity) {
+        const val = Number(elements.sliderStudioClarity.value);
+        elements.readoutStudioClarity.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+      }
+    }
+    if (elements.sliderStudioDeMud && state.studioMode) {
+      elements.sliderStudioDeMud.value = state.studioMode.deMud !== undefined ? state.studioMode.deMud : -4.0;
+      if (elements.readoutStudioDeMud) {
+        const val = Number(elements.sliderStudioDeMud.value);
+        elements.readoutStudioDeMud.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+      }
+    }
+    if (elements.sliderStudioAir && state.studioMode) {
+      elements.sliderStudioAir.value = state.studioMode.air !== undefined ? state.studioMode.air : 4.0;
+      if (elements.readoutStudioAir) {
+        const val = Number(elements.sliderStudioAir.value);
+        elements.readoutStudioAir.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+      }
+    }
+    if (elements.sliderStudioWarmth && state.studioMode) {
+      elements.sliderStudioWarmth.value = state.studioMode.warmth !== undefined ? state.studioMode.warmth : 1.5;
+      if (elements.readoutStudioWarmth) {
+        const val = Number(elements.sliderStudioWarmth.value);
+        elements.readoutStudioWarmth.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+      }
+    }
+  }
+
+  function applyStudioClarityMode(enabled, options = {}) {
+    ensureTrackAudioNodes();
+    state.studioMode = state.studioMode || {};
+    state.studioMode.enabled = !!enabled;
+
+    if (options.preset && STUDIO_PRESETS[options.preset]) {
+      currentStudioPresetKey = options.preset;
+      const p = STUDIO_PRESETS[options.preset];
+      state.studioMode.preset = options.preset;
+      state.studioMode.clarity = p.clarity;
+      state.studioMode.deMud = p.deMud;
+      state.studioMode.air = p.air;
+      state.studioMode.warmth = p.warmth;
+    } else {
+      if (options.clarity !== undefined) state.studioMode.clarity = Number(options.clarity);
+      if (options.deMud !== undefined) state.studioMode.deMud = Number(options.deMud);
+      if (options.air !== undefined) state.studioMode.air = Number(options.air);
+      if (options.warmth !== undefined) state.studioMode.warmth = Number(options.warmth);
+    }
+
+    updateStudioModeDsp();
+    updateStudioModeUI();
+    triggerAutosave();
+  }
+
+  function toggleStudioMode() {
+    const nextState = !(state.studioMode && state.studioMode.enabled);
+    applyStudioClarityMode(nextState);
+    showToast(nextState ? '🎧 Mode Studio Aktif: Kejernihan & Mastering Maksimal' : 'Mode Studio Dinonaktifkan', nextState ? 'success' : 'info');
+  }
+
+  function initAllInOneAndStudioMode() {
+    // 1. Studio Mode Toggle in Toolbar
+    if (elements.btnToggleStudioMode) {
+      elements.btnToggleStudioMode.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleStudioMode();
+      });
+    }
+
+    // 2. Open Studio Mode Modal buttons
+    const openModalHandlers = [elements.btnOpenStudioModeModal, elements.btnAllInOneOpenStudio];
+    openModalHandlers.forEach((btn) => {
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          updateStudioModeUI();
+          openModal(elements.studioModeModal);
+        });
+      }
+    });
+
+    if (elements.btnCloseStudioModeModal) {
+      elements.btnCloseStudioModeModal.addEventListener('click', () => closeModal(elements.studioModeModal));
+    }
+    if (elements.btnCancelStudioMode) {
+      elements.btnCancelStudioMode.addEventListener('click', () => closeModal(elements.studioModeModal));
+    }
+
+    // 3. Studio Preset selection
+    if (elements.studioPresetGrid) {
+      elements.studioPresetGrid.querySelectorAll('.studio-preset-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          const presetKey = card.dataset.preset;
+          if (STUDIO_PRESETS[presetKey]) {
+            currentStudioPresetKey = presetKey;
+            applyStudioClarityMode(true, { preset: presetKey });
+            showToast(`Preset Studio: ${STUDIO_PRESETS[presetKey].name} 🎧`);
+          }
+        });
+      });
+    }
+
+    // 4. Studio Fine-Tuning Sliders
+    if (elements.sliderStudioClarity) {
+      elements.sliderStudioClarity.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (elements.readoutStudioClarity) {
+          elements.readoutStudioClarity.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+        applyStudioClarityMode(true, { clarity: val });
+      });
+    }
+    if (elements.sliderStudioDeMud) {
+      elements.sliderStudioDeMud.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (elements.readoutStudioDeMud) {
+          elements.readoutStudioDeMud.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+        applyStudioClarityMode(true, { deMud: val });
+      });
+    }
+    if (elements.sliderStudioAir) {
+      elements.sliderStudioAir.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (elements.readoutStudioAir) {
+          elements.readoutStudioAir.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+        applyStudioClarityMode(true, { air: val });
+      });
+    }
+    if (elements.sliderStudioWarmth) {
+      elements.sliderStudioWarmth.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (elements.readoutStudioWarmth) {
+          elements.readoutStudioWarmth.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+        applyStudioClarityMode(true, { warmth: val });
+      });
+    }
+
+    // Modal action buttons
+    if (elements.btnApplyStudioMode) {
+      elements.btnApplyStudioMode.addEventListener('click', () => {
+        applyStudioClarityMode(true);
+        closeModal(elements.studioModeModal);
+        showToast('🎧 Mode Studio Aktif: Output Audio Telah Dimastering!');
+      });
+    }
+    if (elements.btnBypassStudioMode) {
+      elements.btnBypassStudioMode.addEventListener('click', () => {
+        applyStudioClarityMode(false);
+        closeModal(elements.studioModeModal);
+        showToast('Mode Studio Dinonaktifkan (Bypass).');
+      });
+    }
+
+    // 5. All-In-One Master Track Row and Stem Indicators
+    if (elements.trackRowAllInOne) {
+      elements.trackRowAllInOne.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        selectStudioTrack('track-all');
+        showToast('🎛️ Lagu Utama Terpadu Aktif: Semua Instrumen Siap Dikustomisasi');
+      });
+    }
+
+    const pillMappings = [
+      { el: elements.pillStemVocal, trackId: 1, name: 'Vokal Utama' },
+      { el: elements.pillStemBass, trackId: 2, name: 'Synth & Bass' },
+      { el: elements.pillStemDrum, trackId: 3, name: 'Cyber Drums' },
+      { el: elements.pillStemFx, trackId: 4, name: 'FX & Drops' }
+    ];
+    pillMappings.forEach(({ el, trackId, name }) => {
+      if (el) {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectStudioTrack(trackId);
+          showToast(`Instrumen Aktif: ${name}`);
+        });
+      }
+    });
+
+    // 6. All-In-One Stem Sliders & Controls
+    // Stem 1: Vocal
+    if (elements.sliderStemVocalVol) {
+      elements.sliderStemVocalVol.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        syncTrackVolume(1, val, 'allinone');
+        if (elements.readoutStemVocalVol) {
+          elements.readoutStemVocalVol.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+      });
+    }
+    if (elements.sliderStemVocalClarity) {
+      elements.sliderStemVocalClarity.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        state.allInOneStems.vocal.clarity = val;
+        if (elements.readoutStemVocalClarity) {
+          elements.readoutStemVocalClarity.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+        if (state.tracks[1]) {
+          state.tracks[1].eq.high = val;
+          updateAudioTrackNode(1);
+        }
+      });
+    }
+    if (elements.btnStemVocalMute) {
+      elements.btnStemVocalMute.addEventListener('click', (e) => {
+        e.stopPropagation();
+        syncTrackMute(1);
+        elements.btnStemVocalMute.classList.toggle('active', state.tracks[1].mute);
+      });
+    }
+    if (elements.btnStemVocalSolo) {
+      elements.btnStemVocalSolo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        syncTrackSolo(1);
+        elements.btnStemVocalSolo.classList.toggle('active', state.tracks[1].solo);
+      });
+    }
+
+    // Stem 2: Bass
+    if (elements.sliderStemBassVol) {
+      elements.sliderStemBassVol.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        syncTrackVolume(2, val, 'allinone');
+        if (elements.readoutStemBassVol) {
+          elements.readoutStemBassVol.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+      });
+    }
+    if (elements.sliderStemBassPunch) {
+      elements.sliderStemBassPunch.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        state.allInOneStems.bass.punch = val;
+        if (elements.readoutStemBassPunch) {
+          elements.readoutStemBassPunch.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+        if (state.tracks[2]) {
+          state.tracks[2].eq.low = val;
+          updateAudioTrackNode(2);
+        }
+      });
+    }
+    if (elements.btnStemBassMute) {
+      elements.btnStemBassMute.addEventListener('click', (e) => {
+        e.stopPropagation();
+        syncTrackMute(2);
+        elements.btnStemBassMute.classList.toggle('active', state.tracks[2].mute);
+      });
+    }
+    if (elements.btnStemBassSolo) {
+      elements.btnStemBassSolo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        syncTrackSolo(2);
+        elements.btnStemBassSolo.classList.toggle('active', state.tracks[2].solo);
+      });
+    }
+
+    // Stem 3: Drum
+    if (elements.sliderStemDrumVol) {
+      elements.sliderStemDrumVol.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        syncTrackVolume(3, val, 'allinone');
+        if (elements.readoutStemDrumVol) {
+          elements.readoutStemDrumVol.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+      });
+    }
+    if (elements.sliderStemDrumPunch) {
+      elements.sliderStemDrumPunch.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        state.allInOneStems.drum.punch = val;
+        if (elements.readoutStemDrumPunch) {
+          elements.readoutStemDrumPunch.textContent = val + '%';
+        }
+        if (state.tracks[3]) {
+          state.tracks[3].eq.mid = (val - 50) / 10;
+          updateAudioTrackNode(3);
+        }
+      });
+    }
+    if (elements.btnStemDrumMute) {
+      elements.btnStemDrumMute.addEventListener('click', (e) => {
+        e.stopPropagation();
+        syncTrackMute(3);
+        elements.btnStemDrumMute.classList.toggle('active', state.tracks[3].mute);
+      });
+    }
+    if (elements.btnStemDrumSolo) {
+      elements.btnStemDrumSolo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        syncTrackSolo(3);
+        elements.btnStemDrumSolo.classList.toggle('active', state.tracks[3].solo);
+      });
+    }
+
+    // Stem 4: FX
+    if (elements.sliderStemFxVol) {
+      elements.sliderStemFxVol.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        syncTrackVolume(4, val, 'allinone');
+        if (elements.readoutStemFxVol) {
+          elements.readoutStemFxVol.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' dB';
+        }
+      });
+    }
+    if (elements.sliderStemFxReverb) {
+      elements.sliderStemFxReverb.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        state.allInOneStems.fx.reverb = val;
+        if (elements.readoutStemFxReverb) {
+          elements.readoutStemFxReverb.textContent = val + '%';
+        }
+        if (state.tracks[4] && state.tracks[4].fx && state.tracks[4].fx.reverb) {
+          state.tracks[4].fx.reverb.mix = val;
+          updateAudioTrackNode(4);
+        }
+      });
+    }
+    if (elements.btnStemFxMute) {
+      elements.btnStemFxMute.addEventListener('click', (e) => {
+        e.stopPropagation();
+        syncTrackMute(4);
+        elements.btnStemFxMute.classList.toggle('active', state.tracks[4].mute);
+      });
+    }
+    if (elements.btnStemFxSolo) {
+      elements.btnStemFxSolo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        syncTrackSolo(4);
+        elements.btnStemFxSolo.classList.toggle('active', state.tracks[4].solo);
+      });
+    }
+
+    // 7. Reset & Download actions
+    if (elements.btnAllInOneReset) {
+      elements.btnAllInOneReset.addEventListener('click', () => {
+        syncTrackVolume(1, 0.0, 'allinone');
+        syncTrackVolume(2, 0.0, 'allinone');
+        syncTrackVolume(3, -1.0, 'allinone');
+        syncTrackVolume(4, 0.0, 'allinone');
+        state.allInOneStems.vocal.clarity = 2.0;
+        state.allInOneStems.bass.punch = 2.5;
+        state.allInOneStems.drum.punch = 60;
+        state.allInOneStems.fx.reverb = 40;
+        [1, 2, 3, 4].forEach((id) => {
+          if (state.tracks[id]) {
+            state.tracks[id].mute = false;
+            state.tracks[id].solo = false;
+            updateAudioTrackNode(id);
+          }
+        });
+        syncAllInOneControlsFromState();
+        showToast('Setelan instrumen di-reset ke standar.');
+      });
+    }
+
+    if (elements.btnAllInOneDownload) {
+      elements.btnAllInOneDownload.addEventListener('click', () => {
+        if (typeof downloadCurrentMix === 'function') {
+          downloadCurrentMix();
+        }
+      });
+    }
+
+    // Initialize UI
+    updateStudioModeUI();
+    syncAllInOneControlsFromState();
+  }
+
+  // --------------------------------------------------------------------------
   // 22. Master Initialization
   // --------------------------------------------------------------------------
   function init() {
@@ -7428,6 +8165,7 @@
     initKeyboardShortcuts();
     initI18nModule();
     initClarityAndVoiceModules();
+    initAllInOneAndStudioMode();
 
     // Module Initializations
     initProjectModule();
@@ -7441,10 +8179,15 @@
     renderProjectsGrid();
     renderLibraryTable();
 
+    // Initial select All-In-One suite
+    selectStudioTrack('track-all');
+
     // Expose helpers for testing and external triggers
     window.selectStudioTrack = selectStudioTrack;
     window.applyTrackClarity = applyTrackClarity;
     window.applyTrackVoice = applyTrackVoice;
+    window.applyStudioClarityMode = applyStudioClarityMode;
+    window.toggleStudioMode = toggleStudioMode;
     window.downloadCurrentMix = downloadCurrentMix;
 
     setTimeout(() => {

@@ -274,6 +274,10 @@
               </svg>
               <span data-i18n="toolbar.voice">Pengubah Suara</span>
             </button>
+            <button class="btn btn-studio-mode btn-xs" id="btnToggleStudioMode" title="Mode Studio: Kejernihan Maksimal & Mastering Profesional">
+              <span>🎧 Mode Studio</span>
+              <span class="badge-studio-mode" id="studioModeBadge">OFF</span>
+            </button>
             <div class="divider-vertical" style="height: 16px; margin: 0 4px;" aria-hidden="true"></div>
             <button class="btn btn-primary btn-xs" id="btnStudioImportAudio" title="Import Audio File directly to Track (MP3, WAV, FLAC, OGG)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -368,8 +372,39 @@
           <!-- Multi-Track Lanes Container -->
           <div class="tracks-container" id="tracksContainer">
             
+            <!-- Track 0: All-In-One Studio Master Suite (Lagu Utama Terpadu) -->
+            <div class="track-row allinone-suite selected" data-track-id="track-all" id="trackRowAllInOne" title="Klik untuk mengaktifkan & kustomisasi seluruh instrumen lagu utama (Vokal, Bass, Drum, FX)">
+              <div class="track-header">
+                <div class="track-header-top">
+                  <div class="track-title-badge">
+                    <div class="track-color-indicator" style="background: linear-gradient(135deg, #FF4500, #FF8C00); box-shadow: 0 0 8px #FF4500;"></div>
+                    <span class="track-name allinone-suite-header-badge">🎵 LAGU UTAMA (ALL-IN-ONE)</span>
+                  </div>
+                  <div class="badge-studio-mode" id="allinoneStudioBadge">🎧 MODE STUDIO</div>
+                </div>
+                <div class="allinone-stem-indicators">
+                  <span class="stem-indicator-pill active" id="pillStemVocal" title="Vokal Utama (Klik untuk atur)">🎤 Vokal</span>
+                  <span class="stem-indicator-pill active" id="pillStemBass" title="Bass & Melodi (Klik untuk atur)">🎸 Bass</span>
+                  <span class="stem-indicator-pill active" id="pillStemDrum" title="Cyber Drums (Klik untuk atur)">🥁 Beat</span>
+                  <span class="stem-indicator-pill active" id="pillStemFx" title="Efek & Drops (Klik untuk atur)">✨ Efek</span>
+                </div>
+              </div>
+              <div class="track-lane" data-track="all" id="trackLaneAllInOne" style="display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+                <div style="display: flex; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 11px;">
+                  <span style="display: inline-flex; align-items: center; gap: 6px; color: #FF8C00; font-weight: 700;">
+                    <span class="pulse-dot" style="background: #FF4500;"></span>
+                    KONTROL TERPADU AKTIF:
+                  </span>
+                  <span>Semua instrumen tersinkron • Klik untuk kustomisasi Vokal, Bass, Beat & Efek</span>
+                </div>
+                <button class="btn btn-studio-mode btn-xs" id="btnOpenStudioModeModal" style="padding: 4px 10px; font-size: 10px;" title="Atur Kejernihan Suara & Karakter Studio">
+                  🎧 Atur Kejernihan Studio
+                </button>
+              </div>
+            </div>
+
             <!-- Track 1: Suno Lead Vocals -->
-            <div class="track-row selected" data-track-id="track-1" id="trackRow1">
+            <div class="track-row" data-track-id="track-1" id="trackRow1">
               <div class="track-header">
                 <div class="track-header-top">
                   <div class="track-title-badge">
@@ -763,7 +798,8 @@
       <aside class="inspector-panel" id="inspectorPanel" role="complementary" aria-label="Inspector Panel">
         <div class="inspector-header">
           <div class="inspector-tabs" role="tablist">
-            <button class="tab-btn active" data-tab="clip" id="tabClip" role="tab" aria-selected="true" data-i18n="inspector.tab_clip">Klip</button>
+            <button class="tab-btn active" data-tab="allinone" id="tabAllInOne" role="tab" aria-selected="true" title="Kustomisasi Gabungan Lagu Utama (Vokal, Bass, Beat, FX)">🎛️ All-In-One</button>
+            <button class="tab-btn" data-tab="clip" id="tabClip" role="tab" aria-selected="false" data-i18n="inspector.tab_clip">Klip</button>
             <button class="tab-btn" data-tab="mixer" id="tabMixer" role="tab" aria-selected="false" data-i18n="inspector.tab_mixer">Mixer</button>
             <button class="tab-btn" data-tab="ai" id="tabAi" role="tab" aria-selected="false" data-i18n="inspector.tab_ai">Alat AI</button>
           </div>
@@ -776,8 +812,171 @@
 
         <div class="inspector-content" id="inspectorContent">
           
+          <!-- TAB PANE: All-In-One Studio Suite (Lagu Utama Terpadu) -->
+          <div class="tab-pane active" id="paneAllInOne">
+            <div class="inspector-card" style="border: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(255, 69, 0, 0.08) 0%, rgba(20, 5, 5, 0.6) 100%);">
+              <div class="card-title-row">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">🎛️</span>
+                  <div>
+                    <span class="card-title" style="color: #FF8C00; font-size: 13px; font-weight: 700;">Lagu Utama Terpadu</span>
+                    <div style="font-size: 10px; color: var(--text-muted);">All-In-One Stem Suite</div>
+                  </div>
+                </div>
+                <button class="btn btn-studio-mode btn-xs" id="btnAllInOneOpenStudio" style="padding: 2px 8px; font-size: 10px;" title="Buka Mode Studio">
+                  🎧 Mode Studio
+                </button>
+              </div>
+              <p style="font-size: 10px; color: var(--text-secondary); line-height: 1.4; margin-top: 6px; margin-bottom: 0;">
+                Semua instrumen aktif dan tersinkronisasi. Sesuaikan volume, clarity, punch, dan reverb tiap elemen di bawah ini secara instan:
+              </p>
+            </div>
+
+            <!-- Stem 1: Lead Vocal -->
+            <div class="inspector-card allinone-stem-card" data-stem="vocal" style="border-left: 3px solid #8B5CF6;">
+              <div class="card-title-row">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">🎤</span>
+                  <div>
+                    <span class="card-title" style="font-size: 12px; font-weight: 700; color: #C4B5FD;">Vokal Utama (Lead Vocal)</span>
+                    <div style="font-size: 10px; color: var(--text-muted);">Artikulasi lirik & kejernihan nada</div>
+                  </div>
+                </div>
+                <div class="track-mute-solo">
+                  <button class="mini-toggle-btn mute" id="btnStemVocalMute" data-track="1" title="Mute Vokal">M</button>
+                  <button class="mini-toggle-btn solo" id="btnStemVocalSolo" data-track="1" title="Solo Vokal">S</button>
+                </div>
+              </div>
+
+              <div class="stem-slider-control-group" style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                  <span style="color: var(--text-secondary); font-weight: 600;">Volume Vokal</span>
+                  <span class="tabular-nums" id="readoutStemVocalVol" style="color: #FF8C00; font-weight: 700;">0.0 dB</span>
+                </div>
+                <input type="range" class="slider-input" id="sliderStemVocalVol" min="-60" max="6" value="0" step="0.5" aria-label="Volume Vokal Utama">
+              </div>
+
+              <div class="stem-slider-control-group" style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                  <span style="color: var(--text-secondary); font-weight: 600;">Kejernihan / Clarity (High-Mid)</span>
+                  <span class="tabular-nums" id="readoutStemVocalClarity" style="color: #A78BFA; font-weight: 700;">+2.0 dB</span>
+                </div>
+                <input type="range" class="slider-input" id="sliderStemVocalClarity" min="-6" max="9" value="2" step="0.5" aria-label="Kejernihan Vokal">
+              </div>
+            </div>
+
+            <!-- Stem 2: Synth & Bass -->
+            <div class="inspector-card allinone-stem-card" data-stem="bass" style="border-left: 3px solid #22D3EE;">
+              <div class="card-title-row">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">🎸</span>
+                  <div>
+                    <span class="card-title" style="font-size: 12px; font-weight: 700; color: #67E8F9;">Synth & Bass (Harmoni)</span>
+                    <div style="font-size: 10px; color: var(--text-muted);">Dasar melodi & resonansi sub-bass</div>
+                  </div>
+                </div>
+                <div class="track-mute-solo">
+                  <button class="mini-toggle-btn mute" id="btnStemBassMute" data-track="2" title="Mute Bass">M</button>
+                  <button class="mini-toggle-btn solo" id="btnStemBassSolo" data-track="2" title="Solo Bass">S</button>
+                </div>
+              </div>
+
+              <div class="stem-slider-control-group" style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                  <span style="color: var(--text-secondary); font-weight: 600;">Volume Bass & Melodi</span>
+                  <span class="tabular-nums" id="readoutStemBassVol" style="color: #FF8C00; font-weight: 700;">0.0 dB</span>
+                </div>
+                <input type="range" class="slider-input" id="sliderStemBassVol" min="-60" max="6" value="0" step="0.5" aria-label="Volume Bass & Melodi">
+              </div>
+
+              <div class="stem-slider-control-group" style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                  <span style="color: var(--text-secondary); font-weight: 600;">Punch & Bobot Bass</span>
+                  <span class="tabular-nums" id="readoutStemBassPunch" style="color: #22D3EE; font-weight: 700;">+2.5 dB</span>
+                </div>
+                <input type="range" class="slider-input" id="sliderStemBassPunch" min="-6" max="9" value="2.5" step="0.5" aria-label="Bobot Bass">
+              </div>
+            </div>
+
+            <!-- Stem 3: Cyber Drums -->
+            <div class="inspector-card allinone-stem-card" data-stem="drum" style="border-left: 3px solid #10B981;">
+              <div class="card-title-row">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">🥁</span>
+                  <div>
+                    <span class="card-title" style="font-size: 12px; font-weight: 700; color: #6EE7B7;">Cyber Drums (Beat & Perkusi)</span>
+                    <div style="font-size: 10px; color: var(--text-muted);">Detak ritme, kick drum & snare</div>
+                  </div>
+                </div>
+                <div class="track-mute-solo">
+                  <button class="mini-toggle-btn mute" id="btnStemDrumMute" data-track="3" title="Mute Drum">M</button>
+                  <button class="mini-toggle-btn solo" id="btnStemDrumSolo" data-track="3" title="Solo Drum">S</button>
+                </div>
+              </div>
+
+              <div class="stem-slider-control-group" style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                  <span style="color: var(--text-secondary); font-weight: 600;">Volume Beat & Perkusi</span>
+                  <span class="tabular-nums" id="readoutStemDrumVol" style="color: #FF8C00; font-weight: 700;">-1.0 dB</span>
+                </div>
+                <input type="range" class="slider-input" id="sliderStemDrumVol" min="-60" max="6" value="-1" step="0.5" aria-label="Volume Beat Drum">
+              </div>
+
+              <div class="stem-slider-control-group" style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                  <span style="color: var(--text-secondary); font-weight: 600;">Ketukan Hentakan (Transient Punch)</span>
+                  <span class="tabular-nums" id="readoutStemDrumPunch" style="color: #10B981; font-weight: 700;">60%</span>
+                </div>
+                <input type="range" class="slider-input" id="sliderStemDrumPunch" min="0" max="100" value="60" step="1" aria-label="Ketukan Hentakan Drum">
+              </div>
+            </div>
+
+            <!-- Stem 4: FX & Drops -->
+            <div class="inspector-card allinone-stem-card" data-stem="fx" style="border-left: 3px solid #F59E0B;">
+              <div class="card-title-row">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">✨</span>
+                  <div>
+                    <span class="card-title" style="font-size: 12px; font-weight: 700; color: #FCD34D;">FX & Drops (Efek Suara)</span>
+                    <div style="font-size: 10px; color: var(--text-muted);">Transisi, risers, ambient & sweeps</div>
+                  </div>
+                </div>
+                <div class="track-mute-solo">
+                  <button class="mini-toggle-btn mute" id="btnStemFxMute" data-track="4" title="Mute FX">M</button>
+                  <button class="mini-toggle-btn solo" id="btnStemFxSolo" data-track="4" title="Solo FX">S</button>
+                </div>
+              </div>
+
+              <div class="stem-slider-control-group" style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                  <span style="color: var(--text-secondary); font-weight: 600;">Volume Efek & Transisi</span>
+                  <span class="tabular-nums" id="readoutStemFxVol" style="color: #FF8C00; font-weight: 700;">0.0 dB</span>
+                </div>
+                <input type="range" class="slider-input" id="sliderStemFxVol" min="-60" max="6" value="0" step="0.5" aria-label="Volume Efek Suara">
+              </div>
+
+              <div class="stem-slider-control-group" style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                  <span style="color: var(--text-secondary); font-weight: 600;">Ruang Reverb & Kedalaman</span>
+                  <span class="tabular-nums" id="readoutStemFxReverb" style="color: #F59E0B; font-weight: 700;">40%</span>
+                </div>
+                <input type="range" class="slider-input" id="sliderStemFxReverb" min="0" max="100" value="40" step="1" aria-label="Ruang Reverb FX">
+              </div>
+            </div>
+
+            <!-- Quick Suite Footer -->
+            <div style="display: flex; gap: 8px; margin-top: 14px;">
+              <button class="btn btn-secondary btn-sm" id="btnAllInOneReset" style="flex: 1;" title="Reset setelan seluruh instrumen ke standar">
+                ↺ Reset
+              </button>
+              <button class="btn btn-emerald btn-sm" id="btnAllInOneDownload" style="flex: 1.6;" title="Download hasil mix gabungan seluruh instrumen">
+                📥 Download Lagu
+              </button>
+            </div>
+          </div>
+          
           <!-- TAB PANE: Clip Inspector -->
-          <div class="tab-pane active" id="paneClip">
+          <div class="tab-pane" id="paneClip" style="display: none;">
             
             <!-- ================================================================
                  Phase 3: Audio Analysis & Buffer Status Card
@@ -2704,10 +2903,136 @@
     </div>
   </div>
 
+  <!-- ======================================================================
+       Phase 10: Mode Studio — Kejernihan & Mastering Audio Modal
+       ====================================================================== -->
+  <div class="modal-overlay" id="studioModeModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="studioModeModalTitle">
+    <div class="modal-card" style="max-width: 600px; border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(255, 69, 0, 0.25);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #FF4500, #FF8C00); display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 0 12px rgba(255, 69, 0, 0.4);">
+            🎧
+          </div>
+          <div>
+            <h3 id="studioModeModalTitle" style="margin: 0; font-size: 15px; font-weight: 700; color: #FFF;">Mode Studio: Kejernihan & Mastering</h3>
+            <span style="font-size: 11px; color: #FF8C00; font-weight: 600;">High-Precision DSP Audio Clarity & Polish</span>
+          </div>
+        </div>
+        <button type="button" class="icon-btn" id="btnCloseStudioModeModal" aria-label="Tutup Modal Mode Studio">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 18px 20px;">
+        <!-- Studio Mode Notice -->
+        <div class="studio-clarity-hud" style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="pulse-dot" style="background: #FF4500;"></span>
+              <strong style="color: #FF8C00; font-size: 12px;">PENGOLAHAN SUARA KELAS STUDIO AKTIF</strong>
+            </div>
+            <span class="badge-studio-mode" id="modalStudioStatusBadge">STANDBY</span>
+          </div>
+          <p style="font-size: 11px; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+            Mode Studio memproses audio melalui rangkaian filter mastering: pembersih getaran rendah (35Hz HPF), pemotong lumpur frekuensi (300Hz Notch), penegas vokal & instrumen (2.8kHz Peaking), dan sparkle kemilau udara (10.5kHz High-Shelf).
+          </p>
+        </div>
+
+        <!-- Studio Presets -->
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
+            Pilih Karakter Studio Preset
+          </div>
+          <div class="studio-preset-grid" id="studioPresetGrid">
+            <div class="studio-preset-card active" data-preset="studio-master" id="presetStudioMaster">
+              <div class="studio-preset-name">🏆 Studio Master Pro</div>
+              <div class="studio-preset-desc">Standar industri: frekuensi seimbang, bass punchy, dan treble kemilau kristal.</div>
+            </div>
+            <div class="studio-preset-card" data-preset="vocal-polish" id="presetVocalPolish">
+              <div class="studio-preset-name">🎤 Vocal Polish Studio</div>
+              <div class="studio-preset-desc">Menonjolkan artikulasi vokal agar berdiri tegak di depan mix instrumen.</div>
+            </div>
+            <div class="studio-preset-card" data-preset="acoustic-air" id="presetAcousticAir">
+              <div class="studio-preset-name">🍃 Acoustic Air & Space</div>
+              <div class="studio-preset-desc">Memberikan ruang ambien luas dengan kilau frekuensi atas 10kHz+ yang lembut.</div>
+            </div>
+            <div class="studio-preset-card" data-preset="deep-denoise" id="presetDeepDenoise">
+              <div class="studio-preset-name">🧹 Deep Denoise & Clean</div>
+              <div class="studio-preset-desc">Pembersihan agresif untuk frekuensi keruh/mendem dan dengung low-end.</div>
+            </div>
+            <div class="studio-preset-card" data-preset="warm-punch" id="presetWarmPunch">
+              <div class="studio-preset-name">🔥 Warm Punch & Body</div>
+              <div class="studio-preset-desc">Kedalaman bass analog yang tebal dan hangat dengan mid frekuensi yang renyah.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mastering Sliders Fine-Tuning -->
+        <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+          <div style="font-size: 11px; font-weight: 700; color: #FF8C00; text-transform: uppercase; margin-bottom: 10px;">
+            🎛️ Penyetelan Parameter Kejernihan Studio
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <!-- Kejernihan / Presence (2.8 kHz) -->
+            <div class="stem-slider-control-group">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                <span style="color: var(--text-secondary); font-weight: 600;">Kejernihan (Presence 2.8kHz)</span>
+                <span class="tabular-nums" id="readoutStudioClarity" style="color: #FF8C00; font-weight: 700;">+3.5 dB</span>
+              </div>
+              <input type="range" class="slider-input" id="sliderStudioClarity" min="-6" max="10" value="3.5" step="0.5" aria-label="Kejernihan Suara Studio">
+            </div>
+
+            <!-- De-Mud Anti Mendem (300 Hz) -->
+            <div class="stem-slider-control-group">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                <span style="color: var(--text-secondary); font-weight: 600;">Pembersih Mendem (De-Mud 300Hz)</span>
+                <span class="tabular-nums" id="readoutStudioDeMud" style="color: #22D3EE; font-weight: 700;">-4.0 dB</span>
+              </div>
+              <input type="range" class="slider-input" id="sliderStudioDeMud" min="-12" max="0" value="-4" step="0.5" aria-label="Potong Frekuensi Mendem">
+            </div>
+
+            <!-- Kemilau Udara (Air Sparkle 10.5 kHz) -->
+            <div class="stem-slider-control-group">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                <span style="color: var(--text-secondary); font-weight: 600;">Kemilau Udara (Air Sparkle 10.5kHz)</span>
+                <span class="tabular-nums" id="readoutStudioAir" style="color: #A78BFA; font-weight: 700;">+4.0 dB</span>
+              </div>
+              <input type="range" class="slider-input" id="sliderStudioAir" min="-6" max="10" value="4" step="0.5" aria-label="Kemilau Frekuensi Udara">
+            </div>
+
+            <!-- Kehangatan Bass (Warmth 100 Hz) -->
+            <div class="stem-slider-control-group">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                <span style="color: var(--text-secondary); font-weight: 600;">Kehangatan Bass (Warmth 100Hz)</span>
+                <span class="tabular-nums" id="readoutStudioWarmth" style="color: #10B981; font-weight: 700;">+1.5 dB</span>
+              </div>
+              <input type="range" class="slider-input" id="sliderStudioWarmth" min="-6" max="8" value="1.5" step="0.5" aria-label="Kehangatan Bass Rendah">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding: 12px 20px;">
+        <button type="button" class="btn btn-secondary" id="btnBypassStudioMode">
+          Matikan Mode Studio
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" id="btnCancelStudioMode">Tutup</button>
+          <button type="button" class="btn btn-primary" id="btnApplyStudioMode" style="background: linear-gradient(135deg, #FF4500, #FF8C00); border: none; font-weight: 700;">
+            Aktifkan Mode Studio 🎧
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Studio JavaScript Engine -->
-  <script src="app.js?v=2.5.0"></script>
+  <script src="app.js?v=2.6.0"></script>
 </body>
 </html>
