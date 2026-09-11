@@ -278,6 +278,13 @@
               <span>🎧 Mode Studio</span>
               <span class="badge-studio-mode" id="studioModeBadge">OFF</span>
             </button>
+            <button class="btn btn-secondary btn-xs" id="btnOpenSoundcard" title="Pengaturan Kartu Suara (Soundcard) & Driver Audio">
+              <span>🔊</span>
+              <span class="badge-soundcard" id="topbarSoundcardBadge">Soundcard: 44.1kHz</span>
+            </button>
+            <button class="btn btn-secondary btn-xs" id="btnToggleTimelineCompact" title="Mode Ringkas Garis Waktu (Cocok untuk Layar Laptop)">
+              <span>📐 Ringkas</span>
+            </button>
             <div class="divider-vertical" style="height: 16px; margin: 0 4px;" aria-hidden="true"></div>
             <button class="btn btn-primary btn-xs" id="btnStudioImportAudio" title="Import Audio File directly to Track (MP3, WAV, FLAC, OGG)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -377,7 +384,7 @@
               <div class="track-header">
                 <div class="track-header-top">
                   <div class="track-title-badge">
-                    <div class="track-color-indicator" style="background: linear-gradient(135deg, #FF4500, #FF8C00); box-shadow: 0 0 8px #FF4500;"></div>
+                    <div class="track-color-indicator" style="background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: 0 0 8px var(--primary);"></div>
                     <span class="track-name allinone-suite-header-badge">🎵 LAGU UTAMA (ALL-IN-ONE)</span>
                   </div>
                   <div class="badge-studio-mode" id="allinoneStudioBadge">🎧 MODE STUDIO</div>
@@ -391,8 +398,8 @@
               </div>
               <div class="track-lane" data-track="all" id="trackLaneAllInOne" style="display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
                 <div style="display: flex; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 11px;">
-                  <span style="display: inline-flex; align-items: center; gap: 6px; color: #FF8C00; font-weight: 700;">
-                    <span class="pulse-dot" style="background: #FF4500;"></span>
+                  <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 700;">
+                    <span class="pulse-dot" style="background: var(--primary);"></span>
                     KONTROL TERPADU AKTIF:
                   </span>
                   <span>Semua instrumen tersinkron • Klik untuk kustomisasi Vokal, Bass, Beat & Efek</span>
@@ -591,6 +598,7 @@
                   <option value="" disabled selected>Preset: Select...</option>
                 </select>
               </div>
+              <button class="btn btn-secondary btn-xs" id="btnToggleMixerCompact" title="Minimize / Compact Konsol Mixer (Hemat Layar Laptop)">_ Minimize</button>
               <button class="btn btn-secondary btn-xs" id="btnMasterMonoToggle" title="Check Mono Compatibility">Stereo</button>
               <button class="icon-btn" id="btnCloseMixerConsole" title="Close Mixer Console" aria-label="Close Mixer Console">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -803,27 +811,32 @@
             <button class="tab-btn" data-tab="mixer" id="tabMixer" role="tab" aria-selected="false" data-i18n="inspector.tab_mixer">Mixer</button>
             <button class="tab-btn" data-tab="ai" id="tabAi" role="tab" aria-selected="false" data-i18n="inspector.tab_ai">Alat AI</button>
           </div>
-          <button class="icon-btn" id="btnToggleInspector" title="Collapse Inspector Panel" aria-label="Collapse Inspector Panel" style="width: 26px; height: 26px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <button class="icon-btn" id="btnToggleInspectorCompact" title="Compact / Minimize Height (Hemat Layar Laptop)" aria-label="Toggle Compact Mode" style="width: 26px; height: 26px; font-size: 11px;">
+              ↕️
+            </button>
+            <button class="icon-btn" id="btnToggleInspector" title="Collapse Inspector Panel" aria-label="Collapse Inspector Panel" style="width: 26px; height: 26px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div class="inspector-content" id="inspectorContent">
           
           <!-- TAB PANE: All-In-One Studio Suite (Lagu Utama Terpadu) -->
           <div class="tab-pane active" id="paneAllInOne">
-            <div class="inspector-card" style="border: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(255, 69, 0, 0.08) 0%, rgba(20, 5, 5, 0.6) 100%);">
+            <div class="inspector-card" style="border: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(139, 92, 246, 0.12) 0%, rgba(13, 15, 20, 0.8) 100%);">
               <div class="card-title-row">
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span style="font-size: 16px;">🎛️</span>
                   <div>
-                    <span class="card-title" style="color: #FF8C00; font-size: 13px; font-weight: 700;">Lagu Utama Terpadu</span>
+                    <span class="card-title" style="color: var(--accent); font-size: 13px; font-weight: 700;">Lagu Utama Terpadu</span>
                     <div style="font-size: 10px; color: var(--text-muted);">All-In-One Stem Suite</div>
                   </div>
                 </div>
-                <button class="btn btn-studio-mode btn-xs" id="btnAllInOneOpenStudio" style="padding: 2px 8px; font-size: 10px;" title="Buka Mode Studio">
+                <button class="btn btn-studio-mode btn-xs" id="btnAllInOneOpenStudio" style="padding: 2px 8px; font-size: 10px; background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; color: #FFF; font-weight: 700;" title="Buka Mode Studio">
                   🎧 Mode Studio
                 </button>
               </div>
@@ -2907,15 +2920,15 @@
        Phase 10: Mode Studio — Kejernihan & Mastering Audio Modal
        ====================================================================== -->
   <div class="modal-overlay" id="studioModeModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="studioModeModalTitle">
-    <div class="modal-card" style="max-width: 600px; border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(255, 69, 0, 0.25);">
+    <div class="modal-card" style="max-width: 600px; border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);">
       <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #FF4500, #FF8C00); display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 0 12px rgba(255, 69, 0, 0.4);">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);">
             🎧
           </div>
           <div>
             <h3 id="studioModeModalTitle" style="margin: 0; font-size: 15px; font-weight: 700; color: #FFF;">Mode Studio: Kejernihan & Mastering</h3>
-            <span style="font-size: 11px; color: #FF8C00; font-weight: 600;">High-Precision DSP Audio Clarity & Polish</span>
+            <span style="font-size: 11px; color: var(--accent); font-weight: 600;">High-Precision DSP Audio Clarity & Polish</span>
           </div>
         </div>
         <button type="button" class="icon-btn" id="btnCloseStudioModeModal" aria-label="Tutup Modal Mode Studio">
@@ -2930,8 +2943,8 @@
         <div class="studio-clarity-hud" style="margin-bottom: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="pulse-dot" style="background: #FF4500;"></span>
-              <strong style="color: #FF8C00; font-size: 12px;">PENGOLAHAN SUARA KELAS STUDIO AKTIF</strong>
+              <span class="pulse-dot" style="background: var(--accent);"></span>
+              <strong style="color: var(--accent); font-size: 12px;">PENGOLAHAN SUARA KELAS STUDIO AKTIF</strong>
             </div>
             <span class="badge-studio-mode" id="modalStudioStatusBadge">STANDBY</span>
           </div>
@@ -3021,10 +3034,119 @@
         </button>
         <div style="display: flex; gap: 8px;">
           <button type="button" class="btn btn-secondary" id="btnCancelStudioMode">Tutup</button>
-          <button type="button" class="btn btn-primary" id="btnApplyStudioMode" style="background: linear-gradient(135deg, #FF4500, #FF8C00); border: none; font-weight: 700;">
+          <button type="button" class="btn btn-primary" id="btnApplyStudioMode" style="background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; font-weight: 700;">
             Aktifkan Mode Studio 🎧
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Soundcard & Audio Interface Modal -->
+  <div class="modal-backdrop" id="soundcardModal" role="dialog" aria-modal="true" aria-labelledby="soundcardModalTitle" style="display: none;">
+    <div class="modal-card" style="max-width: 580px; border: 1px solid var(--border-color); background: var(--panel-bg); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 14px 20px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);">
+            🎛️
+          </div>
+          <div>
+            <h3 id="soundcardModalTitle" style="margin: 0; font-size: 15px; font-weight: 700; color: #FFF;">Soundcard & Audio Interface</h3>
+            <span style="font-size: 11px; color: var(--accent); font-weight: 600;">Konfigurasi Output Suara, Latency & Live Routing</span>
+          </div>
+        </div>
+        <button type="button" class="icon-btn" id="btnCloseSoundcardModal" aria-label="Tutup Modal Soundcard">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 18px 20px;">
+        <!-- Live AudioContext & Hardware Readout Card -->
+        <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="pulse-dot" style="background: var(--accent);"></span>
+              <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">Status Web Audio Hardware</span>
+            </div>
+            <span class="badge" id="soundcardLiveStatusBadge" style="background: rgba(34, 211, 238, 0.15); color: var(--accent); border: 1px solid rgba(34, 211, 238, 0.3); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">ACTIVE</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 11px;">
+            <div>
+              <span style="color: var(--text-muted);">Audio State: </span>
+              <strong id="readoutAudioCtxState" style="color: #10B981;">running</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted);">Sample Rate: </span>
+              <strong id="readoutSampleRate" class="tabular-nums" style="color: var(--accent);">48000 Hz</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted);">Base Latency: </span>
+              <strong id="readoutBaseLatency" class="tabular-nums" style="color: var(--text-main);">< 10 ms</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted);">Output Channel: </span>
+              <strong id="readoutOutputChannels" style="color: var(--text-main);">Stereo (2 Ch)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Soundcard / Device Selector -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="selectSoundcardDevice" style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
+            Perangkat Suara / Audio Device:
+          </label>
+          <select id="selectSoundcardDevice" class="form-select-styled" style="width: 100%; height: 36px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm); padding: 0 10px; font-size: 12px;">
+            <option value="default">Default System Audio Output (Speakers / Headphones)</option>
+          </select>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
+            💡 Mendukung Soundcard USB, Audio Interface Focusrite / Behringer / Realtek ASIO / DirectSound & Headphone.
+          </div>
+        </div>
+
+        <!-- Sample Rate Preference -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="selectSoundcardSampleRate" style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
+            Target Sample Rate Studio:
+          </label>
+          <select id="selectSoundcardSampleRate" class="form-select-styled" style="width: 100%; height: 36px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm); padding: 0 10px; font-size: 12px;">
+            <option value="auto" selected>Auto Detect (Otomatis menyesuaikan perangkat - Rekomendasi)</option>
+            <option value="48000">48,000 Hz (Standar Studio & Broadcast)</option>
+            <option value="44100">44,100 Hz (Standar Musik CD Audio)</option>
+            <option value="96000">96,000 Hz (High-Definition Pro Audio)</option>
+          </select>
+        </div>
+
+        <!-- Buffer Latency Mode -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="selectSoundcardBuffer" style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
+            Buffer Latency Mode:
+          </label>
+          <select id="selectSoundcardBuffer" class="form-select-styled" style="width: 100%; height: 36px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm); padding: 0 10px; font-size: 12px;">
+            <option value="interactive" selected>Interactive (Latency Terendah ~5ms, Responsif Saat Mixing)</option>
+            <option value="balanced">Balanced (Stabil, Aman untuk Semua Spek Laptop)</option>
+            <option value="playback">Playback (Anti-Glitch Buffer Tinggi, Cocok untuk Export Lagu)</option>
+          </select>
+        </div>
+
+        <!-- Audio Output Test -->
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: var(--radius-md); padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-main);">Uji Jalur Suara (Audio Test Tone)</div>
+            <div style="font-size: 10px; color: var(--text-muted);">Kirim sinyal nada 440 Hz (A4) selama 0.5 detik ke speaker/headphone</div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnTestSoundcardTone" style="gap: 6px; white-space: nowrap;">
+            <span>🔊 Tes Beep Suara</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-color); padding: 12px 20px;">
+        <button type="button" class="btn btn-secondary" id="btnCancelSoundcard">Tutup</button>
+        <button type="button" class="btn btn-primary" id="btnApplySoundcard" style="background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; font-weight: 700;">
+          Simpan Konfigurasi Soundcard
+        </button>
       </div>
     </div>
   </div>
@@ -3033,6 +3155,6 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Studio JavaScript Engine -->
-  <script src="app.js?v=2.6.0"></script>
+  <script src="app.js?v=2.7.0"></script>
 </body>
 </html>

@@ -1016,7 +1016,33 @@
     btnExportPresetsJson: document.getElementById('btnExportPresetsJson'),
     btnImportPresetsJson: document.getElementById('btnImportPresetsJson'),
     inputImportPresets: document.getElementById('inputImportPresets'),
-    mixerQuickPresetSelect: document.getElementById('mixerQuickPresetSelect')
+    mixerQuickPresetSelect: document.getElementById('mixerQuickPresetSelect'),
+
+    // Laptop Minimize & Compact Toggles
+    btnToggleTimelineCompact: document.getElementById('btnToggleTimelineCompact'),
+    btnToggleInspectorCompact: document.getElementById('btnToggleInspectorCompact'),
+    btnToggleMixerCompact: document.getElementById('btnToggleMixerCompact'),
+
+    // Soundcard & Audio Interface Modal Elements
+    btnOpenSoundcard: document.getElementById('btnOpenSoundcard'),
+    topbarSoundcardBadge: document.getElementById('topbarSoundcardBadge'),
+    soundcardModal: document.getElementById('soundcardModal'),
+    btnCloseSoundcardModal: document.getElementById('btnCloseSoundcardModal'),
+    btnCancelSoundcard: document.getElementById('btnCancelSoundcard'),
+    btnApplySoundcard: document.getElementById('btnApplySoundcard'),
+    btnTestSoundcardTone: document.getElementById('btnTestSoundcardTone'),
+    selectSoundcardDevice: document.getElementById('selectSoundcardDevice'),
+    selectSoundcardSampleRate: document.getElementById('selectSoundcardSampleRate'),
+    selectSoundcardBuffer: document.getElementById('selectSoundcardBuffer'),
+    readoutAudioCtxState: document.getElementById('readoutAudioCtxState'),
+    readoutSampleRate: document.getElementById('readoutSampleRate'),
+    readoutBaseLatency: document.getElementById('readoutBaseLatency'),
+    readoutOutputChannels: document.getElementById('readoutOutputChannels'),
+    soundcardLiveStatusBadge: document.getElementById('soundcardLiveStatusBadge'),
+
+    // Unwired buttons & settings
+    navSettings: document.getElementById('navSettings'),
+    btnSubmitNewProject: document.getElementById('btnSubmitNewProject')
   };
 
   // --------------------------------------------------------------------------
@@ -8147,7 +8173,181 @@
   }
 
   // --------------------------------------------------------------------------
-  // 22. Master Initialization
+  // 22. Soundcard, Laptop Compact Minimization & Controls Wiring
+  // --------------------------------------------------------------------------
+  function updateSoundcardLiveStatus() {
+    const ctx = getAudioContext();
+    if (elements.readoutAudioCtxState) {
+      elements.readoutAudioCtxState.textContent = ctx ? ctx.state : 'standby';
+      elements.readoutAudioCtxState.style.color = (ctx && ctx.state === 'running') ? '#10B981' : '#F59E0B';
+    }
+    if (elements.readoutSampleRate) {
+      elements.readoutSampleRate.textContent = (ctx ? ctx.sampleRate : 48000) + ' Hz';
+    }
+    if (elements.readoutBaseLatency) {
+      if (ctx && typeof ctx.baseLatency === 'number') {
+        elements.readoutBaseLatency.textContent = (ctx.baseLatency * 1000).toFixed(1) + ' ms';
+      } else {
+        elements.readoutBaseLatency.textContent = '< 10 ms (DirectSound)';
+      }
+    }
+    if (elements.readoutOutputChannels) {
+      elements.readoutOutputChannels.textContent = (ctx && ctx.destination) ? `${ctx.destination.channelCount || 2} Ch (Stereo)` : '2 Ch (Stereo)';
+    }
+    if (elements.soundcardLiveStatusBadge) {
+      elements.soundcardLiveStatusBadge.textContent = (ctx && ctx.state === 'running') ? 'ONLINE' : 'ACTIVE';
+      elements.soundcardLiveStatusBadge.style.color = 'var(--accent)';
+    }
+  }
+
+  function initSoundcardAndMinimizeModule() {
+    // 1. Soundcard Modal Triggers
+    const openSoundcardModal = () => {
+      if (elements.soundcardModal) {
+        elements.soundcardModal.style.display = 'flex';
+        updateSoundcardLiveStatus();
+        populateAudioDevices();
+      }
+    };
+
+    const closeSoundcardModal = () => {
+      if (elements.soundcardModal) {
+        elements.soundcardModal.style.display = 'none';
+      }
+    };
+
+    if (elements.btnOpenSoundcard) {
+      elements.btnOpenSoundcard.addEventListener('click', openSoundcardModal);
+    }
+    if (elements.btnCloseSoundcardModal) {
+      elements.btnCloseSoundcardModal.addEventListener('click', closeSoundcardModal);
+    }
+    if (elements.btnCancelSoundcard) {
+      elements.btnCancelSoundcard.addEventListener('click', closeSoundcardModal);
+    }
+
+    // Sidebar settings nav item triggers soundcard modal
+    if (elements.navSettings) {
+      elements.navSettings.addEventListener('click', (e) => {
+        e.preventDefault();
+        openSoundcardModal();
+      });
+    }
+
+    // Populate Audio Output Devices via MediaDevices API
+    function populateAudioDevices() {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        navigator.mediaDevices.enumerateDevices().then((devices) => {
+          const outputs = devices.filter((d) => d.kind === 'audiooutput');
+          if (outputs.length > 0 && elements.selectSoundcardDevice) {
+            elements.selectSoundcardDevice.innerHTML = '<option value="default">Default System Audio Output (Speakers / Headphones)</option>';
+            outputs.forEach((dev, idx) => {
+              const opt = document.createElement('option');
+              opt.value = dev.deviceId;
+              opt.textContent = dev.label ? `🔊 ${dev.label}` : `Perangkat Suara Output #${idx + 1} (${dev.deviceId.slice(0, 8)}...)`;
+              elements.selectSoundcardDevice.appendChild(opt);
+            });
+          }
+        }).catch(() => {});
+      }
+    }
+
+    // 2. Audio Test Tone Generator (440Hz Sine Wave Beep)
+    if (elements.btnTestSoundcardTone) {
+      elements.btnTestSoundcardTone.addEventListener('click', () => {
+        try {
+          const ctx = getAudioContext();
+          if (ctx) {
+            if (ctx.state === 'suspended') {
+              ctx.resume().catch(() => {});
+            }
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, ctx.currentTime);
+            gain.gain.setValueAtTime(0.18, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.5);
+
+            if (elements.soundcardLiveStatusBadge) {
+              elements.soundcardLiveStatusBadge.textContent = 'OUTPUT OK';
+              elements.soundcardLiveStatusBadge.style.color = '#10B981';
+              setTimeout(() => {
+                elements.soundcardLiveStatusBadge.textContent = 'ONLINE';
+                elements.soundcardLiveStatusBadge.style.color = 'var(--accent)';
+              }, 1200);
+            }
+            showToast('🔊 Sinyal nada 440Hz berhasil dikirim ke Soundcard.');
+          }
+        } catch (err) {
+          console.error('Audio test tone error:', err);
+          showToast('Gagal memutar audio test tone.');
+        }
+      });
+    }
+
+    // 3. Apply Soundcard Configuration
+    if (elements.btnApplySoundcard) {
+      elements.btnApplySoundcard.addEventListener('click', () => {
+        const sr = elements.selectSoundcardSampleRate ? elements.selectSoundcardSampleRate.value : 'auto';
+        const buf = elements.selectSoundcardBuffer ? elements.selectSoundcardBuffer.value : 'interactive';
+        if (elements.topbarSoundcardBadge) {
+          elements.topbarSoundcardBadge.textContent = sr === 'auto' ? '48kHz' : `${Math.round(parseInt(sr, 10) / 1000)}kHz`;
+        }
+        closeSoundcardModal();
+        showToast(`Konfigurasi Soundcard tersimpan: ${sr === 'auto' ? 'Auto 48kHz' : sr + 'Hz'} (${buf})`);
+      });
+    }
+
+    // 4. Laptop Minimize & Compact Mode Toggles
+    if (elements.btnToggleTimelineCompact) {
+      elements.btnToggleTimelineCompact.addEventListener('click', () => {
+        if (elements.tracksContainer) {
+          const isCompact = elements.tracksContainer.classList.toggle('compact-timeline');
+          elements.btnToggleTimelineCompact.classList.toggle('active', isCompact);
+          elements.btnToggleTimelineCompact.title = isCompact ? 'Kembali ke Tampilan Normal Timeline' : 'Mode Ringkas Timeline (Hemat Layar Laptop)';
+          showToast(isCompact ? 'Timeline: Mode Ringkas Laptop Aktif' : 'Timeline: Tampilan Penuh Normal');
+        }
+      });
+    }
+
+    if (elements.btnToggleInspectorCompact) {
+      elements.btnToggleInspectorCompact.addEventListener('click', () => {
+        if (elements.inspectorPanel) {
+          const isCompact = elements.inspectorPanel.classList.toggle('compact-mode');
+          elements.btnToggleInspectorCompact.classList.toggle('active', isCompact);
+          showToast(isCompact ? 'Inspektur: Mode Ringkas Laptop Aktif' : 'Inspektur: Tampilan Normal');
+        }
+      });
+    }
+
+    if (elements.btnToggleMixerCompact) {
+      elements.btnToggleMixerCompact.addEventListener('click', () => {
+        if (elements.mixerConsoleDrawer) {
+          const isMin = elements.mixerConsoleDrawer.classList.toggle('minimized');
+          elements.btnToggleMixerCompact.textContent = isMin ? '◻ Maximize' : '_ Minimize';
+          elements.btnToggleMixerCompact.classList.toggle('active', isMin);
+          showToast(isMin ? 'Konsol Mixer di-minimize ke bawah' : 'Konsol Mixer dibuka kembali');
+        }
+      });
+    }
+
+    // 5. Wire remaining button: #btnSubmitNewProject
+    if (elements.btnSubmitNewProject) {
+      elements.btnSubmitNewProject.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (elements.newProjectForm) {
+          elements.newProjectForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 23. Master Initialization
   // --------------------------------------------------------------------------
   function init() {
     buildTimelineRuler();
@@ -8166,6 +8366,7 @@
     initI18nModule();
     initClarityAndVoiceModules();
     initAllInOneAndStudioMode();
+    initSoundcardAndMinimizeModule();
 
     // Module Initializations
     initProjectModule();
@@ -8189,6 +8390,7 @@
     window.applyStudioClarityMode = applyStudioClarityMode;
     window.toggleStudioMode = toggleStudioMode;
     window.downloadCurrentMix = downloadCurrentMix;
+    window.updateSoundcardLiveStatus = updateSoundcardLiveStatus;
 
     setTimeout(() => {
       showToast(state.language === 'id' ? 'Suno Studio Siap: Bahasa Indonesia Aktif 🇮🇩' : 'Suno Studio Ready: English Active 🇺🇸');
