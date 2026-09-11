@@ -16,3 +16,7 @@ node_modules/
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Private & Prompt Execution Notes
+EXECUTION-PROMPT.md
+prompt-execution.md
